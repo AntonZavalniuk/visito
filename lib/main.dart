@@ -11,13 +11,3 @@ void main() {
     ),
   );
 }
-
-/// Compatibility alias for initial scaffold test prior to Step 9 test overhaul.
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const ProviderScope(child: VisitoApp());
-  }
-}
