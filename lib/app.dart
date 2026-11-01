@@ -102,14 +102,15 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
     return GlassContainer(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       borderRadius: BorderRadius.circular(32),
-      blur: 20,
-      color: AppColors.backgroundDark.withValues(alpha: 0.75),
-      borderColor: Colors.white.withValues(alpha: 0.22),
+      blur: 24,
+      // Solid dark background — fully opaque so items are always visible
+      color: AppColors.backgroundNavy.withValues(alpha: 0.95),
+      borderColor: Colors.white.withValues(alpha: 0.14),
       shadows: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.35),
-          blurRadius: 28,
-          offset: const Offset(0, 10),
+          color: Colors.black.withValues(alpha: 0.55),
+          blurRadius: 32,
+          offset: const Offset(0, 8),
         ),
       ],
       child: Row(
@@ -157,7 +158,7 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
         padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 18 : 12,
+          horizontal: isSelected ? 18 : 14,
           vertical: 10,
         ),
         decoration: BoxDecoration(
@@ -178,9 +179,10 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
             Icon(
               isSelected ? activeIcon : icon,
               size: 20,
+              // Inactive items: bright white so they're visible on dark bg
               color: isSelected
                   ? AppColors.primaryLight
-                  : AppColors.textSecondary,
+                  : Colors.white.withValues(alpha: 0.65),
             ),
             if (isSelected) ...[
               const SizedBox(width: 8),

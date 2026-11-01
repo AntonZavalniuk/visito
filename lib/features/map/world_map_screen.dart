@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +13,7 @@ import '../../providers/countries_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../utils/geo_utils.dart';
 
-/// Interactive world map screen with OpenStreetMap tiles, polygon overlays,
+/// Interactive world map screen with dark background, polygon overlays,
 /// tap-to-toggle visited status, and modern frosted glass controls.
 class WorldMapScreen extends ConsumerStatefulWidget {
   const WorldMapScreen({super.key});
@@ -41,15 +42,13 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
       duration: const Duration(milliseconds: 320),
     );
 
-    _bannerSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _bannerAnimController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
+    _bannerSlideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _bannerAnimController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _bannerFadeAnimation = CurvedAnimation(
       parent: _bannerAnimController,
@@ -104,12 +103,18 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
 
   void _zoomIn() {
     final currentZoom = _mapController.camera.zoom;
-    _mapController.move(_mapController.camera.center, (currentZoom + 1).clamp(1.5, 9.0));
+    _mapController.move(
+      _mapController.camera.center,
+      (currentZoom + 1).clamp(1.5, 9.0),
+    );
   }
 
   void _zoomOut() {
     final currentZoom = _mapController.camera.zoom;
-    _mapController.move(_mapController.camera.center, (currentZoom - 1).clamp(1.5, 9.0));
+    _mapController.move(
+      _mapController.camera.center,
+      (currentZoom - 1).clamp(1.5, 9.0),
+    );
   }
 
   void _resetView() {
@@ -126,7 +131,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
       backgroundColor: AppColors.backgroundDark,
       body: Stack(
         children: [
-          // 1. Map Layer
+          // 1. Map Layer — solid dark background, no tiles
           countriesAsync.when(
             loading: () => _buildLoadingState(),
             error: (err, stack) => _buildErrorState(err),
@@ -140,6 +145,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                   initialZoom: 2.2,
                   minZoom: 1.5,
                   maxZoom: 9.0,
+                  backgroundColor: AppColors.backgroundDark,
                   interactionOptions: const InteractionOptions(
                     flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                   ),
@@ -147,11 +153,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                       _handleMapTap(point, countries, visitedCodes),
                 ),
                 children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.visito',
-                  ),
+                  // No TileLayer — plain dark background from MapOptions
                   PolygonLayer(
                     polygons: _buildCountryPolygons(countries, visitedCodes),
                   ),
@@ -165,7 +167,10 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
             child: Align(
               alignment: Alignment.topCenter,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -291,10 +296,12 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                         ),
                         borderRadius: BorderRadius.circular(30),
                         color: _tappedIsVisited
-                            ? AppColors.primaryDark.withValues(alpha: 0.55)
+                            ? AppColors.visitedOrange.withValues(alpha: 0.30)
                             : AppColors.backgroundCard.withValues(alpha: 0.70),
                         borderColor: _tappedIsVisited
-                            ? AppColors.primaryLight.withValues(alpha: 0.5)
+                            ? AppColors.visitedOrangeLight.withValues(
+                                alpha: 0.5,
+                              )
                             : Colors.white.withValues(alpha: 0.2),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -305,7 +312,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                                   : Icons.remove_circle_outline_rounded,
                               size: 18,
                               color: _tappedIsVisited
-                                  ? AppColors.primaryLight
+                                  ? AppColors.visitedOrangeLight
                                   : AppColors.textSecondary,
                             ),
                             const SizedBox(width: 10),
@@ -339,13 +346,12 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
     for (final country in countries) {
       final isVisited = visitedCodes.contains(country.isoCode);
 
+      // Unvisited: medium-dark grey fill matching the screenshot style
       final fillColor = isVisited
-          ? AppColors.visitedFill(0.48)
-          : Colors.transparent;
-      final strokeColor = isVisited
-          ? AppColors.visitedStroke
-          : AppColors.unvisitedStroke(0.32);
-      final strokeWidth = isVisited ? 1.6 : 0.8;
+          ? AppColors.visitedFill(0.85)
+          : const Color(0xFF64748B).withValues(alpha: 0.55); // Slate 500
+      final strokeColor = AppColors.backgroundNavy;
+      final strokeWidth = isVisited ? 1.4 : 0.6;
 
       for (final ring in country.polygons) {
         polygons.add(
