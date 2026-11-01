@@ -1,30 +1,59 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:visito/app.dart';
+import 'package:visito/data/country_geo_loader.dart';
+import 'package:visito/data/database.dart';
+import 'package:visito/models/country.dart';
+import 'package:visito/providers/database_provider.dart';
 
-import 'package:visito/main.dart';
+class _FakeLoader extends CountryGeoJsonLoader {
+  const _FakeLoader();
+
+  @override
+  Future<List<Country>> loadFromBundle([dynamic bundle]) async {
+    return [
+      Country(
+        isoCode: 'IT',
+        name: 'Italy',
+        polygons: [
+          [const LatLng(41, 12), const LatLng(42, 12), const LatLng(41, 13)]
+        ],
+      ),
+    ];
+  }
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('App smoke test: launches and displays navigation destinations',
+      (WidgetTester tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Build the Visito app and trigger a frame
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          countryGeoJsonLoaderProvider.overrideWithValue(const _FakeLoader()),
+        ],
+        child: const VisitoApp(),
+      ),
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify app title and active map tab
+    expect(find.text('Visito'), findsOneWidget);
+    expect(find.text('Map'), findsOneWidget);
+
+    // Verify the 3 bottom navigation destinations exist
+    expect(find.byIcon(Icons.map_rounded), findsOneWidget); // Active Map icon
+    expect(
+        find.byIcon(Icons.format_list_bulleted_outlined), findsOneWidget); // Countries
+    expect(find.byIcon(Icons.pie_chart_outline_rounded), findsOneWidget); // Stats
+
+    await db.close();
   });
 }
