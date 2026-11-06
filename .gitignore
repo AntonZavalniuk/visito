@@ -52,3 +52,6 @@ app.*.map.json
 
 # Antigravity skills
 skills/
+
+# Local run instructions
+/RUNNING.md
