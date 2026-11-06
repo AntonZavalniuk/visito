@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'core/layout.dart';
 import 'core/theme/app_colors.dart';
 import 'core/widgets/glass_container.dart';
 import 'features/countries/countries_list_screen.dart';
@@ -70,10 +71,7 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
       body: Stack(
         children: [
           // Screens Stack (preserves map & scroll states)
-          IndexedStack(
-            index: _currentIndex,
-            children: _screens,
-          ),
+          IndexedStack(index: _currentIndex, children: _screens),
 
           // Floating Glass Bottom Navigation Bar
           Positioned(
@@ -83,7 +81,12 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
             child: SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                padding: const EdgeInsets.fromLTRB(
+                  24,
+                  0,
+                  24,
+                  kNavBarBottomMargin,
+                ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 380),
