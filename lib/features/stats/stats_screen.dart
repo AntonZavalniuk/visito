@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../models/country.dart';
@@ -50,9 +51,7 @@ class StatsScreen extends ConsumerWidget {
       body: SafeArea(
         child: statsAsync.when(
           loading: () => const Center(
-            child: CircularProgressIndicator(
-              color: AppColors.primaryLight,
-            ),
+            child: CircularProgressIndicator(color: AppColors.primaryLight),
           ),
           error: (err, stack) => Center(
             child: Text(
@@ -67,12 +66,17 @@ class StatsScreen extends ConsumerWidget {
                 .where((c) => visitedCodes.contains(c.isoCode))
                 .toList();
 
-            final remainingCount =
-                (stats.totalCount - stats.visitedCount).clamp(0, stats.totalCount);
+            final remainingCount = (stats.totalCount - stats.visitedCount)
+                .clamp(0, stats.totalCount);
 
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                navBarClearance(context),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -189,8 +193,9 @@ class StatsScreen extends ConsumerWidget {
                           ),
                           borderRadius: BorderRadius.circular(16),
                           color: AppColors.primaryDark.withValues(alpha: 0.25),
-                          borderColor:
-                              AppColors.primaryLight.withValues(alpha: 0.35),
+                          borderColor: AppColors.primaryLight.withValues(
+                            alpha: 0.35,
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -198,8 +203,9 @@ class StatsScreen extends ConsumerWidget {
                                 width: 22,
                                 height: 22,
                                 decoration: BoxDecoration(
-                                  color:
-                                      AppColors.primary.withValues(alpha: 0.3),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.3,
+                                  ),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Center(
@@ -236,7 +242,9 @@ class StatsScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.accentCyan.withValues(alpha: 0.15),
+                              color: AppColors.accentCyan.withValues(
+                                alpha: 0.15,
+                              ),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -397,8 +405,9 @@ class StatsScreen extends ConsumerWidget {
                           child: LinearProgressIndicator(
                             value: value,
                             minHeight: 7,
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.1),
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.1,
+                            ),
                             valueColor: const AlwaysStoppedAnimation<Color>(
                               AppColors.primaryLight,
                             ),

@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/glass_icon_button.dart';
@@ -253,7 +254,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
           // 3. Right-side Glass Zoom & Controls
           Positioned(
             right: 16,
-            bottom: 40,
+            bottom: navBarClearance(context),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -280,52 +281,50 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
 
           // 4. Animated Toast / Notification Pill
           if (_tappedCountryMessage != null)
-            SafeArea(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 28),
-                  child: SlideTransition(
-                    position: _bannerSlideAnimation,
-                    child: FadeTransition(
-                      opacity: _bannerFadeAnimation,
-                      child: GlassContainer(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        borderRadius: BorderRadius.circular(30),
-                        color: _tappedIsVisited
-                            ? AppColors.visitedOrange.withValues(alpha: 0.30)
-                            : AppColors.backgroundCard.withValues(alpha: 0.70),
-                        borderColor: _tappedIsVisited
-                            ? AppColors.visitedOrangeLight.withValues(
-                                alpha: 0.5,
-                              )
-                            : Colors.white.withValues(alpha: 0.2),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _tappedIsVisited
-                                  ? Icons.check_circle_rounded
-                                  : Icons.remove_circle_outline_rounded,
-                              size: 18,
-                              color: _tappedIsVisited
-                                  ? AppColors.visitedOrangeLight
-                                  : AppColors.textSecondary,
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: navBarClearance(context, gap: 12),
+                ),
+                child: SlideTransition(
+                  position: _bannerSlideAnimation,
+                  child: FadeTransition(
+                    opacity: _bannerFadeAnimation,
+                    child: GlassContainer(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      color: _tappedIsVisited
+                          ? AppColors.visitedOrange.withValues(alpha: 0.30)
+                          : AppColors.backgroundCard.withValues(alpha: 0.70),
+                      borderColor: _tappedIsVisited
+                          ? AppColors.visitedOrangeLight.withValues(alpha: 0.5)
+                          : Colors.white.withValues(alpha: 0.2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _tappedIsVisited
+                                ? Icons.check_circle_rounded
+                                : Icons.remove_circle_outline_rounded,
+                            size: 18,
+                            color: _tappedIsVisited
+                                ? AppColors.visitedOrangeLight
+                                : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            _tappedCountryMessage!,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
                             ),
-                            const SizedBox(width: 10),
-                            Text(
-                              _tappedCountryMessage!,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

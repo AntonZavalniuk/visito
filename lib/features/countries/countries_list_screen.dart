@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../models/country.dart';
@@ -45,7 +46,8 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
     Set<String> visitedCodes,
   ) {
     return allCountries.where((country) {
-      final matchesSearch = _searchQuery.isEmpty ||
+      final matchesSearch =
+          _searchQuery.isEmpty ||
           country.name.toLowerCase().contains(_searchQuery) ||
           country.isoCode.toLowerCase().contains(_searchQuery);
 
@@ -180,7 +182,7 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                           filter: CountryFilter.unvisited,
                           count: statsAsync.value != null
                               ? statsAsync.value!.totalCount -
-                                  statsAsync.value!.visitedCount
+                                    statsAsync.value!.visitedCount
                               : null,
                         ),
                       ],
@@ -207,8 +209,7 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                   ),
                 ),
                 data: (allCountries) {
-                  final visitedCodes =
-                      visitedCodesAsync.value ?? <String>{};
+                  final visitedCodes = visitedCodesAsync.value ?? <String>{};
                   final filtered = _filterCountries(allCountries, visitedCodes);
 
                   if (filtered.isEmpty) {
@@ -216,7 +217,12 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                   }
 
                   return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      4,
+                      16,
+                      navBarClearance(context),
+                    ),
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
                       final country = filtered[index];
