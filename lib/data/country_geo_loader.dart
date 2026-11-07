@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -70,6 +71,10 @@ class CountryGeoJsonLoader {
           Country(
             isoCode: isoCode,
             name: name,
+            continent: Continent.fromLabel(properties['CONTINENT']?.toString()),
+            disputed: properties['DISPUTED'] == true,
+            unMember: properties['UN_MEMBER'] == true,
+            unObserver: properties['UN_OBSERVER'] == true,
             polygons: polygons,
           ),
         );
@@ -77,14 +82,18 @@ class CountryGeoJsonLoader {
     }
 
     // Sort alphabetically by name
-    countries.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    countries.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
     return countries;
   }
 
   /// Natural Earth's `ISO_A2` is '-99' for some countries (e.g. France, Norway, Kosovo).
   /// Falls back to `ISO_A3` or `ADM0_A3` so no country fails to load or identify uniquely.
   static String _resolveIsoCode(
-      Map<String, dynamic> props, String fallbackName) {
+    Map<String, dynamic> props,
+    String fallbackName,
+  ) {
     final isoA2 = props['ISO_A2']?.toString().trim();
     if (isoA2 != null &&
         isoA2.isNotEmpty &&
