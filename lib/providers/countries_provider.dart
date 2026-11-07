@@ -1,11 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/country_geo_loader.dart';
 import '../models/country.dart';
 import 'database_provider.dart';
 
 /// Loads and parses the world countries GeoJSON dataset once.
 final worldCountriesProvider = FutureProvider<List<Country>>((ref) async {
   final loader = ref.watch(countryGeoJsonLoaderProvider);
+  return loader.loadFromBundle();
+});
+
+/// Antarctica boundary, displayed only on the Globe. It is intentionally not
+/// part of [worldCountriesProvider] so it does not affect stats, the country
+/// list or the flat map.
+final antarcticaProvider = FutureProvider<List<Country>>((ref) async {
+  final loader = CountryGeoJsonLoader(assetPath: 'assets/antarctica.geojson');
   return loader.loadFromBundle();
 });
 
@@ -20,10 +29,7 @@ class WorldStats {
   final int visitedCount;
   final int totalCount;
 
-  const WorldStats({
-    required this.visitedCount,
-    required this.totalCount,
-  });
+  const WorldStats({required this.visitedCount, required this.totalCount});
 
   /// Visited countries percentage (0.0% to 100.0%).
   double get percentage =>
@@ -68,13 +74,11 @@ final worldStatsProvider = Provider<AsyncValue<WorldStats>>((ref) {
   final countries = countriesAsync.value ?? [];
   final visitedCodes = visitedAsync.value ?? {};
 
-  final visitedCount =
-      countries.where((c) => visitedCodes.contains(c.isoCode)).length;
+  final visitedCount = countries
+      .where((c) => visitedCodes.contains(c.isoCode))
+      .length;
 
   return AsyncValue.data(
-    WorldStats(
-      visitedCount: visitedCount,
-      totalCount: countries.length,
-    ),
+    WorldStats(visitedCount: visitedCount, totalCount: countries.length),
   );
 });

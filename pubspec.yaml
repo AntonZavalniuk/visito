@@ -32,5 +32,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  shaders:
+    - shaders/globe.frag
+
   assets:
     - assets/world_countries.geojson
+    - assets/antarctica.geojson
+    - assets/globe_relief.jpg
