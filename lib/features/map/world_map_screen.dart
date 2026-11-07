@@ -361,10 +361,10 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                       ),
                       borderRadius: BorderRadius.circular(30),
                       color: _tappedIsVisited
-                          ? AppColors.visitedOrange.withValues(alpha: 0.30)
+                          ? AppColors.visitedAmber.withValues(alpha: 0.30)
                           : AppColors.backgroundCard.withValues(alpha: 0.70),
                       borderColor: _tappedIsVisited
-                          ? AppColors.visitedOrangeLight.withValues(alpha: 0.5)
+                          ? AppColors.visitedAmberLight.withValues(alpha: 0.5)
                           : Colors.white.withValues(alpha: 0.2),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -375,7 +375,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                                 : Icons.remove_circle_outline_rounded,
                             size: 18,
                             color: _tappedIsVisited
-                                ? AppColors.visitedOrangeLight
+                                ? AppColors.visitedAmberLight
                                 : AppColors.textSecondary,
                           ),
                           const SizedBox(width: 10),

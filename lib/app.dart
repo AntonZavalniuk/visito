@@ -4,6 +4,7 @@ import 'core/layout.dart';
 import 'core/theme/app_colors.dart';
 import 'core/widgets/glass_container.dart';
 import 'features/countries/countries_list_screen.dart';
+import 'features/globe/globe_screen.dart';
 import 'features/map/world_map_screen.dart';
 import 'features/stats/stats_screen.dart';
 
@@ -46,7 +47,7 @@ class VisitoApp extends StatelessWidget {
   }
 }
 
-/// Home shell holding the 3 primary screens and the floating glass navigation bar.
+/// Home shell holding the 4 primary screens and the floating glass navigation bar.
 class VisitoHomeShell extends StatefulWidget {
   const VisitoHomeShell({super.key});
 
@@ -59,6 +60,7 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
 
   final List<Widget> _screens = const [
     WorldMapScreen(),
+    GlobeScreen(),
     CountriesListScreen(),
     StatsScreen(),
   ];
@@ -127,12 +129,18 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
           ),
           _buildNavItem(
             index: 1,
+            label: 'Globe',
+            icon: Icons.public_outlined,
+            activeIcon: Icons.public,
+          ),
+          _buildNavItem(
+            index: 2,
             label: 'Countries',
             icon: Icons.format_list_bulleted_outlined,
             activeIcon: Icons.format_list_bulleted_rounded,
           ),
           _buildNavItem(
-            index: 2,
+            index: 3,
             label: 'Stats',
             icon: Icons.pie_chart_outline_rounded,
             activeIcon: Icons.pie_chart_rounded,

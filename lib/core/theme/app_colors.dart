@@ -27,14 +27,14 @@ class AppColors {
   static Color glassBorder([double opacity = 0.20]) =>
       Colors.white.withValues(alpha: opacity);
 
-  // Map polygon colors — visited = orange
-  static const Color visitedOrange = Color(0xFFF97316); // Orange 500
-  static const Color visitedOrangeLight = Color(0xFFFB923C); // Orange 400
+  // Map polygon colors — visited = amber
+  static const Color visitedAmber = Color(0xFFF4A900); // Amber
+  static const Color visitedAmberLight = Color(0xFFFFC233); // Amber, lighter
 
   static Color visitedFill([double opacity = 0.55]) =>
-      visitedOrange.withValues(alpha: opacity);
+      visitedAmber.withValues(alpha: opacity);
 
-  static const Color visitedStroke = visitedOrangeLight;
+  static const Color visitedStroke = visitedAmberLight;
   static Color unvisitedStroke([double opacity = 0.35]) =>
       Colors.white.withValues(alpha: opacity);
 
