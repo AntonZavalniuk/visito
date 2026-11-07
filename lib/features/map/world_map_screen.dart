@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -26,6 +27,43 @@ class WorldMapScreen extends ConsumerStatefulWidget {
 class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
     with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
+
+  // Visible part of the world (Mercator-friendly: no polar caps).
+  static const double _northLat = 84;
+  static const double _southLat = -58;
+  static const double _maxZoomLevel = 9.0;
+
+  // Shifts the fitted view horizontally: positive moves the map to the left.
+  static const double _centerLngOffset = 10;
+
+  double _fitZoom = 1.5;
+  LatLng _fitCenter = const LatLng(20, 0);
+  bool _zoomedIn = false;
+
+  static double _mercY(double lat) =>
+      math.log(math.tan(math.pi / 4 + lat * math.pi / 360));
+
+  /// Computes zoom/center at which the whole world fits the viewport.
+  void _computeFit(Size size) {
+    const tile = 256.0;
+    final yN = _mercY(_northLat);
+    final yS = _mercY(_southLat);
+    final zoomW = math.log(size.width / tile) / math.ln2;
+    final zoomH =
+        math.log(size.height * 2 * math.pi / (tile * (yN - yS))) / math.ln2;
+    _fitZoom = math.min(zoomW, zoomH);
+    final yMid = (yN + yS) / 2;
+    final latMid =
+        (2 * math.atan(math.exp(yMid)) - math.pi / 2) * 180 / math.pi;
+    _fitCenter = LatLng(latMid, _centerLngOffset);
+  }
+
+  void _onPositionChanged(MapCamera camera, bool hasGesture) {
+    final zoomed = camera.zoom > _fitZoom + 0.01;
+    if (zoomed != _zoomedIn) {
+      setState(() => _zoomedIn = zoomed);
+    }
+  }
 
   String? _tappedCountryMessage;
   bool _tappedIsVisited = false;
@@ -106,7 +144,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
     final currentZoom = _mapController.camera.zoom;
     _mapController.move(
       _mapController.camera.center,
-      (currentZoom + 1).clamp(1.5, 9.0),
+      (currentZoom + 1).clamp(_fitZoom, _maxZoomLevel),
     );
   }
 
@@ -114,12 +152,15 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
     final currentZoom = _mapController.camera.zoom;
     _mapController.move(
       _mapController.camera.center,
-      (currentZoom - 1).clamp(1.5, 9.0),
+      (currentZoom - 1).clamp(_fitZoom, _maxZoomLevel),
     );
+    if (_mapController.camera.zoom <= _fitZoom + 0.01) {
+      _mapController.move(_fitCenter, _fitZoom);
+    }
   }
 
   void _resetView() {
-    _mapController.move(const LatLng(20, 0), 2.2);
+    _mapController.move(_fitCenter, _fitZoom);
   }
 
   @override
@@ -139,26 +180,48 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
             data: (countries) {
               final visitedCodes = visitedCodesAsync.value ?? <String>{};
 
-              return FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: const LatLng(20, 0),
-                  initialZoom: 2.2,
-                  minZoom: 1.5,
-                  maxZoom: 9.0,
-                  backgroundColor: AppColors.backgroundDark,
-                  interactionOptions: const InteractionOptions(
-                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                  ),
-                  onTap: (tapPosition, point) =>
-                      _handleMapTap(point, countries, visitedCodes),
-                ),
-                children: [
-                  // No TileLayer — plain dark background from MapOptions
-                  PolygonLayer(
-                    polygons: _buildCountryPolygons(countries, visitedCodes),
-                  ),
-                ],
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  _computeFit(constraints.biggest);
+                  return FlutterMap(
+                    key: ValueKey(
+                      '${constraints.maxWidth.round()}x${constraints.maxHeight.round()}',
+                    ),
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _fitCenter,
+                      initialZoom: _fitZoom,
+                      minZoom: _fitZoom,
+                      maxZoom: _maxZoomLevel,
+                      backgroundColor: AppColors.backgroundDark,
+                      cameraConstraint: CameraConstraint.containCenter(
+                        bounds: LatLngBounds(
+                          const LatLng(_southLat, -180),
+                          const LatLng(_northLat, 180),
+                        ),
+                      ),
+                      onPositionChanged: _onPositionChanged,
+                      // Whole world is shown static; panning only after zoom-in.
+                      interactionOptions: InteractionOptions(
+                        flags: _zoomedIn
+                            ? InteractiveFlag.all & ~InteractiveFlag.rotate
+                            : InteractiveFlag.pinchZoom |
+                                  InteractiveFlag.scrollWheelZoom |
+                                  InteractiveFlag.doubleTapZoom,
+                      ),
+                      onTap: (tapPosition, point) =>
+                          _handleMapTap(point, countries, visitedCodes),
+                    ),
+                    children: [
+                      PolygonLayer(
+                        polygons: _buildCountryPolygons(
+                          countries,
+                          visitedCodes,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               );
             },
           ),
