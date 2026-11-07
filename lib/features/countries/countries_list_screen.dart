@@ -25,6 +25,9 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
   CountryFilter _currentFilter = CountryFilter.all;
   String _searchQuery = '';
 
+  /// Titles of continent groups the user collapsed.
+  final Set<String> _collapsedGroups = {};
+
   @override
   void initState() {
     super.initState();
@@ -63,6 +66,114 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
           return !isVisited;
       }
     }).toList();
+  }
+
+  /// While searching, every matching group stays expanded so results are
+  /// never hidden behind a collapsed header.
+  bool _isCollapsed(String title) =>
+      _searchQuery.isEmpty && _collapsedGroups.contains(title);
+
+  void _toggleGroup(String title) {
+    setState(() {
+      if (!_collapsedGroups.remove(title)) _collapsedGroups.add(title);
+    });
+  }
+
+  /// Flattens [countries] into continent headers followed by their countries.
+  /// Continents without matching countries are omitted.
+  ///
+  /// Header counters show count / total for the whole continent in
+  /// [allCountries]: visited / total, or unvisited / total under the
+  /// Unvisited filter. Search does not change them.
+  List<Object> _buildGroupedItems(
+    List<Country> countries,
+    List<Country> allCountries,
+    Set<String> visitedCodes,
+  ) {
+    ({int visited, int total}) countsFor(bool Function(Country) inGroup) {
+      final all = allCountries.where(inGroup).toList();
+      final visited = all.where((c) => visitedCodes.contains(c.isoCode)).length;
+      // Under the Unvisited filter the counter shows unvisited / total.
+      return (
+        visited: _currentFilter == CountryFilter.unvisited
+            ? all.length - visited
+            : visited,
+        total: all.length,
+      );
+    }
+
+    final items = <Object>[];
+    for (final continent in Continent.values) {
+      final group = countries.where((c) => c.continent == continent).toList();
+      if (group.isEmpty) continue;
+      final counts = countsFor((c) => c.continent == continent);
+      items.add(
+        _ContinentHeader(
+          continent: continent,
+          visited: counts.visited,
+          total: counts.total,
+        ),
+      );
+      if (!_isCollapsed(continent.label)) items.addAll(group);
+    }
+    // Countries without a known continent are listed last.
+    final other = countries.where((c) => c.continent == null).toList();
+    if (other.isNotEmpty) {
+      final counts = countsFor((c) => c.continent == null);
+      items.add(
+        _ContinentHeader(
+          label: 'Other',
+          visited: counts.visited,
+          total: counts.total,
+        ),
+      );
+      if (!_isCollapsed('Other')) items.addAll(other);
+    }
+    return items;
+  }
+
+  Widget _buildContinentHeader(_ContinentHeader header) {
+    final collapsed = _isCollapsed(header.title);
+    return InkWell(
+      key: ValueKey('group_${header.title}'),
+      borderRadius: BorderRadius.circular(12),
+      onTap: _searchQuery.isEmpty ? () => _toggleGroup(header.title) : null,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
+        child: Row(
+          children: [
+            AnimatedRotation(
+              turns: collapsed ? -0.25 : 0,
+              duration: const Duration(milliseconds: 180),
+              child: const Icon(
+                Icons.expand_more_rounded,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              header.title.toUpperCase(),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${header.visited} / ${header.total}',
+              style: const TextStyle(
+                color: AppColors.primaryLight,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -216,6 +327,12 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                     return _buildEmptyState();
                   }
 
+                  final items = _buildGroupedItems(
+                    filtered,
+                    allCountries,
+                    visitedCodes,
+                  );
+
                   return ListView.builder(
                     padding: EdgeInsets.fromLTRB(
                       16,
@@ -223,9 +340,13 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                       16,
                       navBarClearance(context),
                     ),
-                    itemCount: filtered.length,
+                    itemCount: items.length,
                     itemBuilder: (context, index) {
-                      final country = filtered[index];
+                      final item = items[index];
+                      if (item is _ContinentHeader) {
+                        return _buildContinentHeader(item);
+                      }
+                      final country = item as Country;
                       final isVisited = visitedCodes.contains(country.isoCode);
 
                       return _buildCountryTile(country, isVisited);
@@ -362,13 +483,30 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      country.name,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            country.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (country.disputed) ...[
+                          const SizedBox(width: 8),
+                          _buildTag('DISP', AppColors.textSecondary),
+                        ] else if (country.unMember) ...[
+                          const SizedBox(width: 8),
+                          _buildTag('UN', AppColors.accentCyan),
+                        ] else if (country.unObserver) ...[
+                          const SizedBox(width: 8),
+                          _buildTag('OBS', AppColors.primaryLight),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -400,6 +538,27 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Small outlined badge shown next to a country name (e.g. UN, DISP).
+  Widget _buildTag(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
         ),
       ),
     );
@@ -457,4 +616,18 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
       ),
     );
   }
+}
+
+/// Section header row shown above each continent's countries.
+class _ContinentHeader {
+  _ContinentHeader({
+    Continent? continent,
+    String? label,
+    required this.visited,
+    required this.total,
+  }) : title = continent?.label ?? label ?? 'Other';
+
+  final String title;
+  final int visited;
+  final int total;
 }

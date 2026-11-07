@@ -1,20 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/country_geo_loader.dart';
 import '../models/country.dart';
 import 'database_provider.dart';
 
 /// Loads and parses the world countries GeoJSON dataset once.
 final worldCountriesProvider = FutureProvider<List<Country>>((ref) async {
   final loader = ref.watch(countryGeoJsonLoaderProvider);
-  return loader.loadFromBundle();
-});
-
-/// Antarctica boundary, displayed only on the Globe. It is intentionally not
-/// part of [worldCountriesProvider] so it does not affect stats, the country
-/// list or the flat map.
-final antarcticaProvider = FutureProvider<List<Country>>((ref) async {
-  final loader = CountryGeoJsonLoader(assetPath: 'assets/antarctica.geojson');
   return loader.loadFromBundle();
 });
 

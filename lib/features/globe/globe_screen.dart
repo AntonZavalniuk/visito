@@ -37,7 +37,6 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
 
   List<GlobeRing>? _rings;
   List<Country>? _ringsSource;
-  List<Country>? _decorativeSource;
 
   String? _message;
   bool _messageIsVisited = false;
@@ -97,12 +96,10 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
     );
   }
 
-  List<GlobeRing> _ringsFor(List<Country> countries, List<Country> decorative) {
-    if (!identical(_ringsSource, countries) ||
-        !identical(_decorativeSource, decorative)) {
+  List<GlobeRing> _ringsFor(List<Country> countries) {
+    if (!identical(_ringsSource, countries)) {
       _ringsSource = countries;
-      _decorativeSource = decorative;
-      _rings = GlobeRing.fromCountries([...countries, ...decorative]);
+      _rings = GlobeRing.fromCountries(countries);
     }
     return _rings!;
   }
@@ -168,10 +165,7 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
                 ),
               ),
               data: (countries) {
-                // Antarctica is drawn on the globe only (not tappable, not counted).
-                final antarctica =
-                    ref.watch(antarcticaProvider).value ?? const <Country>[];
-                final rings = _ringsFor(countries, antarctica);
+                final rings = _ringsFor(countries);
                 return LayoutBuilder(
                   builder: (context, constraints) {
                     final size = constraints.biggest;
