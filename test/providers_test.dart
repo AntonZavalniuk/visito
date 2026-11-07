@@ -19,6 +19,7 @@ class _FakeLoader extends CountryGeoJsonLoader {
       Country(
         isoCode: 'CA',
         name: 'Canada',
+        unMember: true,
         polygons: [
           [const LatLng(50, -100), const LatLng(60, -100), const LatLng(50, -90)]
         ],
@@ -26,6 +27,7 @@ class _FakeLoader extends CountryGeoJsonLoader {
       Country(
         isoCode: 'JP',
         name: 'Japan',
+        unMember: true,
         polygons: [
           [const LatLng(35, 139), const LatLng(36, 139), const LatLng(35, 140)]
         ],
@@ -33,6 +35,7 @@ class _FakeLoader extends CountryGeoJsonLoader {
       Country(
         isoCode: 'IT',
         name: 'Italy',
+        unMember: true,
         polygons: [
           [const LatLng(41, 12), const LatLng(42, 12), const LatLng(41, 13)]
         ],
@@ -40,6 +43,7 @@ class _FakeLoader extends CountryGeoJsonLoader {
       Country(
         isoCode: 'BR',
         name: 'Brazil',
+        unMember: true,
         polygons: [
           [const LatLng(-15, -47), const LatLng(-14, -47), const LatLng(-15, -46)]
         ],

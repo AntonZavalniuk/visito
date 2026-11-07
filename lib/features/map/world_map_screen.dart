@@ -34,7 +34,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
   static const double _maxZoomLevel = 9.0;
 
   // Shifts the fitted view horizontally: positive moves the map to the left.
-  static const double _centerLngOffset = 10;
+  static const double _centerLngOffset = 0;
 
   double _fitZoom = 1.5;
   LatLng _fitCenter = const LatLng(20, 0);
@@ -56,6 +56,24 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
     final latMid =
         (2 * math.atan(math.exp(yMid)) - math.pi / 2) * 180 / math.pi;
     _fitCenter = LatLng(latMid, _centerLngOffset);
+  }
+
+  /// After the window is resized (e.g. entering full screen) a map that was
+  /// showing the whole world must be re-fitted, otherwise it keeps the zoom of
+  /// the previous size.
+  void _refitAfterResize(double previousFit) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        final zoom = _mapController.camera.zoom;
+        final wasFitted = zoom <= previousFit + 0.01;
+        if (wasFitted || zoom < _fitZoom) {
+          _mapController.move(_fitCenter, _fitZoom);
+        }
+      } catch (_) {
+        // Controller not attached yet: the initial camera is already correct.
+      }
+    });
   }
 
   void _onPositionChanged(MapCamera camera, bool hasGesture) {
@@ -177,18 +195,27 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
           countriesAsync.when(
             loading: () => _buildLoadingState(),
             error: (err, stack) => _buildErrorState(err),
-            data: (countries) {
+            data: (allCountries) {
+              // Antarctica is shown on the Globe only.
+              final countries = allCountries
+                  .where((c) => c.continent != Continent.antarctica)
+                  .toList();
               final visitedCodes = visitedCodesAsync.value ?? <String>{};
 
               return LayoutBuilder(
                 builder: (context, constraints) {
+                  final previousFit = _fitZoom;
                   _computeFit(constraints.biggest);
+                  if ((_fitZoom - previousFit).abs() > 1e-6) {
+                    _refitAfterResize(previousFit);
+                  }
                   return FlutterMap(
                     key: ValueKey(
                       '${constraints.maxWidth.round()}x${constraints.maxHeight.round()}',
                     ),
                     mapController: _mapController,
                     options: MapOptions(
+                      crs: const _SingleWorldMercator(),
                       initialCenter: _fitCenter,
                       initialZoom: _fitZoom,
                       minZoom: _fitZoom,
@@ -214,6 +241,8 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                     ),
                     children: [
                       PolygonLayer(
+                        // Never repeat the world horizontally on wide screens.
+                        drawInSingleWorld: true,
                         polygons: _buildCountryPolygons(
                           countries,
                           visitedCodes,
@@ -507,4 +536,13 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
       ),
     );
   }
+}
+
+/// Web-mercator CRS that does not repeat the world horizontally, so wide
+/// (e.g. full-screen) windows show a single world instead of copies.
+class _SingleWorldMercator extends Epsg3857 {
+  const _SingleWorldMercator();
+
+  @override
+  bool get replicatesWorldLongitude => false;
 }

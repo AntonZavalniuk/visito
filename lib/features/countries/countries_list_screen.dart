@@ -182,6 +182,17 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
     final visitedCodesAsync = ref.watch(visitedCountryCodesProvider);
     final statsAsync = ref.watch(worldStatsProvider);
 
+    // Chip counters describe the list below (all entries), while the header
+    // pill shows the official (UN member) stats.
+    final allListCountries = countriesAsync.value;
+    final visitedListCount = allListCountries
+        ?.where((c) => (visitedCodesAsync.value ?? {}).contains(c.isoCode))
+        .length;
+    final unvisitedListCount =
+        allListCountries == null || visitedListCount == null
+        ? null
+        : allListCountries.length - visitedListCount;
+
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
       body: SafeArea(
@@ -285,16 +296,13 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                         _buildFilterChip(
                           title: 'Visited',
                           filter: CountryFilter.visited,
-                          count: statsAsync.value?.visitedCount,
+                          count: visitedListCount,
                         ),
                         const SizedBox(width: 8),
                         _buildFilterChip(
                           title: 'Unvisited',
                           filter: CountryFilter.unvisited,
-                          count: statsAsync.value != null
-                              ? statsAsync.value!.totalCount -
-                                    statsAsync.value!.visitedCount
-                              : null,
+                          count: unvisitedListCount,
                         ),
                       ],
                     ),

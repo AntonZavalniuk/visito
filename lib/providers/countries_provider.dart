@@ -62,14 +62,18 @@ final worldStatsProvider = Provider<AsyncValue<WorldStats>>((ref) {
     return AsyncValue.error(visitedAsync.error!, visitedAsync.stackTrace!);
   }
 
-  final countries = countriesAsync.value ?? [];
+  // Only officially recognized countries (UN member states) are counted;
+  // observers, disputed territories and Antarctica are excluded.
+  final official = (countriesAsync.value ?? <Country>[])
+      .where((c) => c.unMember)
+      .toList();
   final visitedCodes = visitedAsync.value ?? {};
 
-  final visitedCount = countries
+  final visitedCount = official
       .where((c) => visitedCodes.contains(c.isoCode))
       .length;
 
   return AsyncValue.data(
-    WorldStats(visitedCount: visitedCount, totalCount: countries.length),
+    WorldStats(visitedCount: visitedCount, totalCount: official.length),
   );
 });
