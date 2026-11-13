@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../models/country.dart';
 import '../../providers/countries_provider.dart';
+import 'continent_deck.dart';
 
 /// Modern frosted glass statistics screen visualizing travel progress,
 /// world coverage percentage, travel rank, and metric cards.
@@ -43,8 +44,6 @@ class StatsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(worldStatsProvider);
-    final countriesAsync = ref.watch(worldCountriesProvider);
-    final visitedCodesAsync = ref.watch(visitedCountryCodesProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -60,14 +59,11 @@ class StatsScreen extends ConsumerWidget {
             ),
           ),
           data: (stats) {
-            final visitedCodes = visitedCodesAsync.value ?? <String>{};
-            final allCountries = countriesAsync.value ?? <Country>[];
-            final visitedCountries = allCountries
-                .where((c) => visitedCodes.contains(c.isoCode))
-                .toList();
-
-            final remainingCount = (stats.totalCount - stats.visitedCount)
-                .clamp(0, stats.totalCount);
+            final continentStats = ref.watch(continentStatsProvider);
+            final countries =
+                ref.watch(worldCountriesProvider).value ?? <Country>[];
+            final visitedCodes =
+                ref.watch(visitedCountryCodesProvider).value ?? <String>{};
 
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -111,127 +107,24 @@ class StatsScreen extends ConsumerWidget {
 
                   const SizedBox(height: 16),
 
-                  // Metric Cards Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildMetricCard(
-                          title: 'Visited',
-                          value: '${stats.visitedCount}',
-                          subtitle: 'Countries',
-                          icon: Icons.check_circle_rounded,
-                          accentColor: AppColors.primaryLight,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildMetricCard(
-                          title: 'Remaining',
-                          value: '$remainingCount',
-                          subtitle: 'To explore',
-                          icon: Icons.flag_rounded,
-                          accentColor: AppColors.accentCyan,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildMetricCard(
-                          title: 'Total',
-                          value: '${stats.totalCount}',
-                          subtitle: 'In database',
-                          icon: Icons.public_rounded,
-                          accentColor: AppColors.accentPurple,
-                        ),
-                      ),
-                    ],
-                  ),
-
                   const SizedBox(height: 24),
 
-                  // Visited Countries Chips or Empty Callout
-                  if (visitedCountries.isNotEmpty) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Explored Lands',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${visitedCountries.length}',
-                            style: const TextStyle(
-                              color: AppColors.primaryLight,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
+                  // Continent cards or Empty Callout
+                  if (stats.visitedCount > 0) ...[
+                    const Text(
+                      'Explored Lands',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: visitedCountries.map((c) {
-                        return GlassContainer(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          color: AppColors.primaryDark.withValues(alpha: 0.25),
-                          borderColor: AppColors.primaryLight.withValues(
-                            alpha: 0.35,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 22,
-                                height: 22,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.3,
-                                  ),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    c.isoCode,
-                                    style: const TextStyle(
-                                      color: AppColors.primaryLight,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                c.name,
-                                style: const TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                    ContinentDeck(
+                      overall: stats,
+                      continents: continentStats,
+                      countries: countries,
+                      visitedCodes: visitedCodes,
                     ),
                   ] else ...[
                     GlassContainer(
@@ -469,44 +362,6 @@ class StatsScreen extends ConsumerWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricCard({
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color accentColor,
-  }) {
-    return GlassContainer(
-      padding: const EdgeInsets.all(14),
-      borderRadius: BorderRadius.circular(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: accentColor, size: 22),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
             ),
           ),
         ],

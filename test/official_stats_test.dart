@@ -63,4 +63,30 @@ void main() {
     expect(stats.totalCount, 2);
     expect(stats.visitedCount, 1);
   });
+
+  test('computeContinentStats groups official countries by continent', () {
+    Country c(String iso, Continent? cont, {bool un = true}) => Country(
+      isoCode: iso,
+      name: iso,
+      continent: cont,
+      unMember: un,
+      polygons: _Loader._ring(),
+    );
+    final countries = [
+      c('FR', Continent.europe),
+      c('DE', Continent.europe),
+      c('JP', Continent.asia),
+      c('PS', Continent.asia, un: false), // observer, excluded
+      c('AQ', Continent.antarctica, un: false), // no official countries
+    ];
+
+    final stats = computeContinentStats(countries, {'FR', 'PS', 'AQ'});
+
+    expect(stats.map((s) => s.continent), [Continent.asia, Continent.europe]);
+    final europe = stats.last;
+    expect((europe.visited, europe.total), (1, 2));
+    expect(europe.progress, 0.5);
+    final asia = stats.first;
+    expect((asia.visited, asia.total), (0, 1));
+  });
 }

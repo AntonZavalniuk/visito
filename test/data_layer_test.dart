@@ -13,11 +13,7 @@ void main() {
         isoCode: 'TEST',
         name: 'Testland',
         polygons: [
-          [
-            const LatLng(10, 20),
-            const LatLng(30, 40),
-            const LatLng(10, 40),
-          ]
+          [const LatLng(10, 20), const LatLng(30, 40), const LatLng(10, 40)],
         ],
       );
 

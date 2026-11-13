@@ -77,3 +77,60 @@ final worldStatsProvider = Provider<AsyncValue<WorldStats>>((ref) {
     WorldStats(visitedCount: visitedCount, totalCount: official.length),
   );
 });
+
+/// Visited / total official (UN member) countries for one continent.
+class ContinentStats {
+  const ContinentStats({
+    required this.continent,
+    required this.visited,
+    required this.total,
+  });
+
+  final Continent continent;
+  final int visited;
+  final int total;
+
+  /// Progress fraction for gauges (0.0 to 1.0).
+  double get progress => total == 0 ? 0.0 : (visited / total).clamp(0.0, 1.0);
+
+  @override
+  bool operator ==(Object other) =>
+      other is ContinentStats &&
+      other.continent == continent &&
+      other.visited == visited &&
+      other.total == total;
+
+  @override
+  int get hashCode => Object.hash(continent, visited, total);
+}
+
+/// Computes per-continent stats from official (UN member) countries only,
+/// in [Continent] display order. Continents without official countries
+/// (e.g. Antarctica) are omitted.
+List<ContinentStats> computeContinentStats(
+  List<Country> countries,
+  Set<String> visitedCodes,
+) {
+  final result = <ContinentStats>[];
+  for (final continent in Continent.values) {
+    final official = countries
+        .where((c) => c.unMember && c.continent == continent)
+        .toList();
+    if (official.isEmpty) continue;
+    result.add(
+      ContinentStats(
+        continent: continent,
+        visited: official.where((c) => visitedCodes.contains(c.isoCode)).length,
+        total: official.length,
+      ),
+    );
+  }
+  return result;
+}
+
+/// Reactive per-continent statistics.
+final continentStatsProvider = Provider<List<ContinentStats>>((ref) {
+  final countries = ref.watch(worldCountriesProvider).value ?? <Country>[];
+  final visited = ref.watch(visitedCountryCodesProvider).value ?? <String>{};
+  return computeContinentStats(countries, visited);
+});

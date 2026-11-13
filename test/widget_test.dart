@@ -19,7 +19,7 @@ class _FakeLoader extends CountryGeoJsonLoader {
         isoCode: 'IT',
         name: 'Italy',
         polygons: [
-          [const LatLng(41, 12), const LatLng(42, 12), const LatLng(41, 13)]
+          [const LatLng(41, 12), const LatLng(42, 12), const LatLng(41, 13)],
         ],
       ),
     ];
@@ -27,8 +27,9 @@ class _FakeLoader extends CountryGeoJsonLoader {
 }
 
 void main() {
-  testWidgets('App smoke test: launches and displays navigation destinations',
-      (WidgetTester tester) async {
+  testWidgets('App smoke test: launches and displays navigation destinations', (
+    WidgetTester tester,
+  ) async {
     final db = AppDatabase(NativeDatabase.memory());
 
     // Build the Visito app and trigger a frame
@@ -51,8 +52,13 @@ void main() {
     // Verify the 3 bottom navigation destinations exist
     expect(find.byIcon(Icons.map_rounded), findsOneWidget); // Active Map icon
     expect(
-        find.byIcon(Icons.format_list_bulleted_outlined), findsOneWidget); // Countries
-    expect(find.byIcon(Icons.pie_chart_outline_rounded), findsOneWidget); // Stats
+      find.byIcon(Icons.format_list_bulleted_outlined),
+      findsOneWidget,
+    ); // Countries
+    expect(
+      find.byIcon(Icons.pie_chart_outline_rounded),
+      findsOneWidget,
+    ); // Stats
 
     await db.close();
   });

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:visito/data/country_geo_loader.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:visito/models/country.dart';
+import 'package:visito/providers/countries_provider.dart';
 import 'package:visito/utils/geo_utils.dart';
 
 void main() {
@@ -58,6 +59,28 @@ void main() {
     expect(
       findCountryAtPoint(LatLng(35.39, 77.24), countries)?.name,
       'Siachen Glacier (Kashmir)',
+    );
+  });
+
+  test('transcontinental countries use one continent everywhere', () {
+    final json = File('assets/world_countries.geojson').readAsStringSync();
+    final countries = const CountryGeoJsonLoader().parse(json);
+    Continent? of(String name) =>
+        countries.firstWhere((c) => c.name == name).continent;
+
+    // The Countries list, the Stats cards and the card backdrops all read
+    // Country.continent, so pinning it here keeps them consistent.
+    expect(of('Russia'), Continent.europe);
+    expect(of('Turkey'), Continent.asia);
+    expect(of('Kazakhstan'), Continent.asia);
+    expect(of('Egypt'), Continent.africa);
+
+    final europe = computeContinentStats(countries, {});
+    expect(
+      europe.firstWhere((s) => s.continent == Continent.europe).total,
+      countries
+          .where((c) => c.unMember && c.continent == Continent.europe)
+          .length,
     );
   });
 
