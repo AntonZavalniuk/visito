@@ -25,7 +25,7 @@ class _FakeLoader extends CountryGeoJsonLoader {
             const LatLng(51, -5),
             const LatLng(51, 8),
             const LatLng(42, 8),
-          ]
+          ],
         ],
       ),
     ];
@@ -42,9 +42,7 @@ void main() {
           databaseProvider.overrideWithValue(db),
           countryGeoJsonLoaderProvider.overrideWithValue(const _FakeLoader()),
         ],
-        child: const MaterialApp(
-          home: WorldMapScreen(),
-        ),
+        child: const MaterialApp(home: WorldMapScreen()),
       ),
     );
 

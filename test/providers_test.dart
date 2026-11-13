@@ -21,7 +21,11 @@ class _FakeLoader extends CountryGeoJsonLoader {
         name: 'Canada',
         unMember: true,
         polygons: [
-          [const LatLng(50, -100), const LatLng(60, -100), const LatLng(50, -90)]
+          [
+            const LatLng(50, -100),
+            const LatLng(60, -100),
+            const LatLng(50, -90),
+          ],
         ],
       ),
       Country(
@@ -29,7 +33,7 @@ class _FakeLoader extends CountryGeoJsonLoader {
         name: 'Japan',
         unMember: true,
         polygons: [
-          [const LatLng(35, 139), const LatLng(36, 139), const LatLng(35, 140)]
+          [const LatLng(35, 139), const LatLng(36, 139), const LatLng(35, 140)],
         ],
       ),
       Country(
@@ -37,7 +41,7 @@ class _FakeLoader extends CountryGeoJsonLoader {
         name: 'Italy',
         unMember: true,
         polygons: [
-          [const LatLng(41, 12), const LatLng(42, 12), const LatLng(41, 13)]
+          [const LatLng(41, 12), const LatLng(42, 12), const LatLng(41, 13)],
         ],
       ),
       Country(
@@ -45,7 +49,11 @@ class _FakeLoader extends CountryGeoJsonLoader {
         name: 'Brazil',
         unMember: true,
         polygons: [
-          [const LatLng(-15, -47), const LatLng(-14, -47), const LatLng(-15, -46)]
+          [
+            const LatLng(-15, -47),
+            const LatLng(-14, -47),
+            const LatLng(-15, -46),
+          ],
         ],
       ),
     ];
@@ -89,7 +97,10 @@ void main() {
     test('worldCountriesProvider loads list of countries', () async {
       final countries = await container.read(worldCountriesProvider.future);
       expect(countries.length, 4);
-      expect(countries.map((c) => c.isoCode), containsAll(['CA', 'JP', 'IT', 'BR']));
+      expect(
+        countries.map((c) => c.isoCode),
+        containsAll(['CA', 'JP', 'IT', 'BR']),
+      );
     });
 
     test('visitedCountryCodesProvider streams visited set', () async {
@@ -127,18 +138,17 @@ void main() {
       // Pre-load countries
       await container.read(worldCountriesProvider.future);
 
-      final sub = container.listen<AsyncValue<WorldStats>>(
-        worldStatsProvider,
-        (previous, next) {
-          next.whenData((stats) {
-            statValues.add(stats);
-            if (statValues.length >= 3 && !completer.isCompleted) {
-              completer.complete();
-            }
-          });
-        },
-        fireImmediately: true,
-      );
+      final sub = container.listen<AsyncValue<WorldStats>>(worldStatsProvider, (
+        previous,
+        next,
+      ) {
+        next.whenData((stats) {
+          statValues.add(stats);
+          if (statValues.length >= 3 && !completer.isCompleted) {
+            completer.complete();
+          }
+        });
+      }, fireImmediately: true);
 
       final repo = container.read(countryRepositoryProvider);
 
@@ -156,8 +166,14 @@ void main() {
       expect(statValues.first.visitedCount, 0);
       expect(statValues.first.totalCount, 4);
 
-      expect(statValues.any((s) => s.visitedCount == 1 && s.percentage == 25.0), isTrue);
-      expect(statValues.any((s) => s.visitedCount == 2 && s.percentage == 50.0), isTrue);
+      expect(
+        statValues.any((s) => s.visitedCount == 1 && s.percentage == 25.0),
+        isTrue,
+      );
+      expect(
+        statValues.any((s) => s.visitedCount == 2 && s.percentage == 50.0),
+        isTrue,
+      );
 
       sub.close();
     });

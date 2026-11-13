@@ -22,7 +22,7 @@ class _FakeLoader extends CountryGeoJsonLoader {
         isoCode: 'IT',
         name: 'Italy',
         polygons: [
-          [const LatLng(41, 12), const LatLng(42, 12), const LatLng(41, 13)]
+          [const LatLng(41, 12), const LatLng(42, 12), const LatLng(41, 13)],
         ],
       ),
     ];
@@ -30,51 +30,53 @@ class _FakeLoader extends CountryGeoJsonLoader {
 }
 
 void main() {
-  testWidgets('VisitoHomeShell navigates between Map, Countries, and Stats screens',
-      (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
+  testWidgets(
+    'VisitoHomeShell navigates between Map, Countries, and Stats screens',
+    (tester) async {
+      final db = AppDatabase(NativeDatabase.memory());
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-          countryGeoJsonLoaderProvider.overrideWithValue(const _FakeLoader()),
-        ],
-        child: const VisitoApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            countryGeoJsonLoaderProvider.overrideWithValue(const _FakeLoader()),
+          ],
+          child: const VisitoApp(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    // Initially on Map screen
-    expect(find.byType(WorldMapScreen), findsOneWidget);
-    expect(find.text('Map'), findsOneWidget);
+      // Initially on Map screen
+      expect(find.byType(WorldMapScreen), findsOneWidget);
+      expect(find.text('Map'), findsOneWidget);
 
-    // Tap Countries tab icon
-    await tester.tap(find.byIcon(Icons.format_list_bulleted_outlined));
-    await tester.pumpAndSettle();
+      // Tap Countries tab icon
+      await tester.tap(find.byIcon(Icons.format_list_bulleted_outlined));
+      await tester.pumpAndSettle();
 
-    // Countries screen should now be visible
-    expect(find.byType(CountriesListScreen), findsOneWidget);
-    expect(find.text('Countries'), findsWidgets);
+      // Countries screen should now be visible
+      expect(find.byType(CountriesListScreen), findsOneWidget);
+      expect(find.text('Countries'), findsWidgets);
 
-    // Tap Stats tab icon
-    await tester.tap(find.byIcon(Icons.pie_chart_outline_rounded));
-    await tester.pumpAndSettle();
+      // Tap Stats tab icon
+      await tester.tap(find.byIcon(Icons.pie_chart_outline_rounded));
+      await tester.pumpAndSettle();
 
-    // Stats screen should now be visible
-    expect(find.byType(StatsScreen), findsOneWidget);
-    expect(find.text('Stats'), findsWidgets);
-    expect(find.text('Travel Stats'), findsOneWidget);
+      // Stats screen should now be visible
+      expect(find.byType(StatsScreen), findsOneWidget);
+      expect(find.text('Stats'), findsWidgets);
+      expect(find.text('Travel Stats'), findsOneWidget);
 
-    // Tap Map tab icon
-    await tester.tap(find.byIcon(Icons.map_outlined));
-    await tester.pumpAndSettle();
+      // Tap Map tab icon
+      await tester.tap(find.byIcon(Icons.map_outlined));
+      await tester.pumpAndSettle();
 
-    // Map screen should be active again
-    expect(find.byType(WorldMapScreen), findsOneWidget);
-    expect(find.text('Map'), findsWidgets);
+      // Map screen should be active again
+      expect(find.byType(WorldMapScreen), findsOneWidget);
+      expect(find.text('Map'), findsWidgets);
 
-    await db.close();
-  });
+      await db.close();
+    },
+  );
 }

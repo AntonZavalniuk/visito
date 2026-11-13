@@ -30,7 +30,10 @@ void main() {
     test('returns false for degenerate polygon with < 3 points', () {
       expect(isPointInPolygon(const LatLng(1, 1), []), isFalse);
       expect(
-        isPointInPolygon(const LatLng(1, 1), [const LatLng(0, 0), const LatLng(2, 2)]),
+        isPointInPolygon(const LatLng(1, 1), [
+          const LatLng(0, 0),
+          const LatLng(2, 2),
+        ]),
         isFalse,
       );
     });
@@ -84,7 +87,7 @@ void main() {
           const LatLng(-1, -10),
           const LatLng(-1, -1),
           const LatLng(-10, -1),
-        ]
+        ],
       ],
     );
 
@@ -98,8 +101,14 @@ void main() {
     test('findCountryAtPoint resolves matching country', () {
       final countries = [archipelago, neighbor];
 
-      expect(findCountryAtPoint(const LatLng(15, 15), countries)?.isoCode, 'ARC');
-      expect(findCountryAtPoint(const LatLng(-5, -5), countries)?.isoCode, 'NBR');
+      expect(
+        findCountryAtPoint(const LatLng(15, 15), countries)?.isoCode,
+        'ARC',
+      );
+      expect(
+        findCountryAtPoint(const LatLng(-5, -5), countries)?.isoCode,
+        'NBR',
+      );
       expect(findCountryAtPoint(const LatLng(0, 0), countries), isNull);
     });
   });
@@ -112,22 +121,34 @@ void main() {
       expect(countries.isNotEmpty, isTrue);
 
       // Paris, France: Lat 48.8566, Lng 2.3522
-      final franceMatch = findCountryAtPoint(const LatLng(48.8566, 2.3522), countries);
+      final franceMatch = findCountryAtPoint(
+        const LatLng(48.8566, 2.3522),
+        countries,
+      );
       expect(franceMatch, isNotNull);
       expect(franceMatch!.name, 'France');
 
       // Berlin, Germany: Lat 52.5200, Lng 13.4050
-      final germanyMatch = findCountryAtPoint(const LatLng(52.5200, 13.4050), countries);
+      final germanyMatch = findCountryAtPoint(
+        const LatLng(52.5200, 13.4050),
+        countries,
+      );
       expect(germanyMatch, isNotNull);
       expect(germanyMatch!.name, 'Germany');
 
       // Tokyo, Japan: Lat 35.6762, Lng 139.6503
-      final japanMatch = findCountryAtPoint(const LatLng(35.6762, 139.6503), countries);
+      final japanMatch = findCountryAtPoint(
+        const LatLng(35.6762, 139.6503),
+        countries,
+      );
       expect(japanMatch, isNotNull);
       expect(japanMatch!.name, 'Japan');
 
       // Mid-Atlantic Ocean: Lat 25.0, Lng -40.0 -> no country
-      final oceanMatch = findCountryAtPoint(const LatLng(25.0, -40.0), countries);
+      final oceanMatch = findCountryAtPoint(
+        const LatLng(25.0, -40.0),
+        countries,
+      );
       expect(oceanMatch, isNull);
     });
   });
