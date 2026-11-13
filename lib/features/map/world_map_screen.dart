@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/country_status_tag.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/glass_icon_button.dart';
 import '../../models/country.dart';
@@ -331,6 +332,8 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                                 fontSize: 13,
                               ),
                             ),
+                            const SizedBox(width: 8),
+                            const UnScopeBadge(),
                           ],
                         ),
                       ),

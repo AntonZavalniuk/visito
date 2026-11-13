@@ -15,6 +15,13 @@ class CountryRepository {
     });
   }
 
+  /// Streams visited country ISO codes together with when they were marked.
+  Stream<Map<String, DateTime>> watchVisitedEntries() {
+    return _db.select(_db.visitedCountries).watch().map((rows) {
+      return {for (final r in rows) r.isoCode: r.visitedAt};
+    });
+  }
+
   /// Fetches the set of all visited country ISO codes once.
   Future<Set<String>> getVisitedCodes() async {
     final rows = await _db.select(_db.visitedCountries).get();

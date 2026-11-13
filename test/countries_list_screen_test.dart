@@ -176,4 +176,32 @@ void main() {
 
     await db.close();
   });
+
+  testWidgets('scope hints explain which counters include what', (
+    tester,
+  ) async {
+    final db = AppDatabase(NativeDatabase.memory());
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          countryGeoJsonLoaderProvider.overrideWithValue(const _FakeLoader()),
+        ],
+        child: const MaterialApp(home: CountriesListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Header pill: official (UN) counter.
+    expect(find.text('UN'), findsWidgets);
+    // Filter chips count everything, including disputed & observers.
+    expect(find.byKey(const ValueKey('list_scope_hint')), findsOneWidget);
+    expect(
+      find.text('Counts include disputed & observer entries'),
+      findsOneWidget,
+    );
+
+    await db.close();
+  });
 }

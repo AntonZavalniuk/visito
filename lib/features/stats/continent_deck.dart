@@ -140,18 +140,8 @@ class _ContinentDeckState extends State<ContinentDeck>
     return _rings!;
   }
 
-  /// Continents (of 7, including Antarctica) with at least one visited
-  /// country, official or not.
-  int get _visitedContinents {
-    final set = <Continent>{};
-    for (final c in widget.countries) {
-      final continent = c.continent;
-      if (continent != null && widget.visitedCodes.contains(c.isoCode)) {
-        set.add(continent);
-      }
-    }
-    return set.length;
-  }
+  int get _visitedContinents =>
+      visitedContinentsOf(widget.countries, widget.visitedCodes).length;
 
   List<Country> get _antarcticaEntries => widget.countries
       .where((c) => c.continent == Continent.antarctica)
