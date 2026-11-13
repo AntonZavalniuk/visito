@@ -65,7 +65,15 @@ void main() {
       expect(find.text('World Explored'), findsOneWidget);
       expect(find.text('0 of 2 countries visited'), findsOneWidget);
       expect(find.text('Aspiring Explorer 🌱'), findsOneWidget);
+      // The hero counter says what it counts.
+      expect(find.byKey(const ValueKey('hero_scope_hint')), findsOneWidget);
+      expect(find.text('UN member states only'), findsOneWidget);
       expect(find.text('Ready to explore?'), findsOneWidget);
+      // Rank progress: 0 of 1 needed for Curious Wanderer.
+      expect(
+        find.text('1 more UN country to Curious Wanderer 🎒'),
+        findsOneWidget,
+      );
 
       // Mark 1 country as visited
       final repo = CountryRepository(db);
@@ -77,6 +85,10 @@ void main() {
       // Verify reactive update
       expect(find.text('1 of 2 countries visited'), findsOneWidget);
       expect(find.text('Curious Wanderer 🎒'), findsOneWidget);
+      expect(
+        find.text('5 more UN countries to Globetrotter ✈️'),
+        findsOneWidget,
+      );
       expect(find.text('Explored Lands'), findsOneWidget);
       // The metric cards (Visited / Remaining / Total) are gone.
       expect(find.text('Remaining'), findsNothing);
@@ -121,6 +133,74 @@ void main() {
       // A dismissed card goes to the back: the deck cycles to In Total.
       await swipeAway();
       expect(find.text('In Total'), findsOneWidget);
+
+      // Recent activity: the country just marked shows up as "Today".
+      final recent = find.byKey(const ValueKey('timeline_CA'));
+      await tester.ensureVisible(recent);
+      await tester.pumpAndSettle();
+      expect(find.text('Recent Activity'), findsOneWidget);
+      expect(
+        find.descendant(of: recent, matching: find.text('Canada')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: recent, matching: find.text('Today')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('timeline_visited')),
+          matching: find.text('1'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('timeline_visited')),
+          matching: find.text('Visited Countries'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('timeline_streak')),
+          matching: find.text('Month streak'),
+        ),
+        findsOneWidget,
+      );
+
+      // Achievements: First Stamp is unlocked after marking one country.
+      final firstStamp = find.byKey(const ValueKey('achievement_first_stamp'));
+      await tester.ensureVisible(firstStamp);
+      await tester.pumpAndSettle();
+      expect(find.text('Achievements'), findsOneWidget);
+      expect(
+        find.descendant(of: firstStamp, matching: find.text('Unlocked')),
+        findsOneWidget,
+      );
+      // Every badge explains how to earn it.
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('achievement_double_digits')),
+          matching: find.text('Visit 10 UN countries'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('achievement_both_hemispheres')),
+        findsOneWidget,
+      );
+      final gettingStarted = find.byKey(
+        const ValueKey('achievement_getting_started'),
+      );
+      expect(
+        find.descendant(of: gettingStarted, matching: find.text('1 / 5')),
+        findsOneWidget,
+      );
+
+      // Scroll back to the deck before interacting with it again.
+      await tester.ensureVisible(deck);
+      await tester.pumpAndSettle();
 
       // A short drag springs back instead of dismissing the card.
       await tester.drag(deck, const Offset(-40, 0));

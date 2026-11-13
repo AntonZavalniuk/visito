@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/country_status_tag.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../models/country.dart';
 import '../../providers/countries_provider.dart';
@@ -162,12 +163,15 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
               ),
             ),
             const Spacer(),
-            Text(
-              '${header.visited} / ${header.total}',
-              style: const TextStyle(
-                color: AppColors.primaryLight,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+            Tooltip(
+              message: 'Incl. disputed & observer',
+              child: Text(
+                '${header.visited} / ${header.total}',
+                style: const TextStyle(
+                  color: AppColors.primaryLight,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
@@ -224,13 +228,20 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                             vertical: 8,
                           ),
                           borderRadius: BorderRadius.circular(20),
-                          child: Text(
-                            '${stats.visitedCount} / ${stats.totalCount}',
-                            style: const TextStyle(
-                              color: AppColors.primaryLight,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${stats.visitedCount} / ${stats.totalCount}',
+                                style: const TextStyle(
+                                  color: AppColors.primaryLight,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const UnScopeBadge(),
+                            ],
                           ),
                         ),
                         loading: () => const SizedBox.shrink(),
@@ -305,6 +316,16 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                           count: unvisitedListCount,
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Counts include disputed & observer entries',
+                    key: ValueKey('list_scope_hint'),
+                    style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -504,15 +525,9 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                             ),
                           ),
                         ),
-                        if (country.disputed) ...[
+                        if (CountryStatusTag.labelFor(country) != null) ...[
                           const SizedBox(width: 8),
-                          _buildTag('DISP', AppColors.textSecondary),
-                        ] else if (country.unMember) ...[
-                          const SizedBox(width: 8),
-                          _buildTag('UN', AppColors.accentCyan),
-                        ] else if (country.unObserver) ...[
-                          const SizedBox(width: 8),
-                          _buildTag('OBS', AppColors.primaryLight),
+                          CountryStatusTag(country: country),
                         ],
                       ],
                     ),
@@ -546,27 +561,6 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  /// Small outlined badge shown next to a country name (e.g. UN, DISP).
-  Widget _buildTag(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
         ),
       ),
     );

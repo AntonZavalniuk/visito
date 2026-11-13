@@ -15,6 +15,12 @@ final visitedCountryCodesProvider = StreamProvider<Set<String>>((ref) {
   return repo.watchVisitedCodes();
 });
 
+/// Streams when each visited country was marked (ISO code -> timestamp).
+final visitedEntriesProvider = StreamProvider<Map<String, DateTime>>((ref) {
+  final repo = ref.watch(countryRepositoryProvider);
+  return repo.watchVisitedEntries();
+});
+
 /// Model holding statistical summary of visited countries.
 class WorldStats {
   final int visitedCount;
@@ -134,3 +140,19 @@ final continentStatsProvider = Provider<List<ContinentStats>>((ref) {
   final visited = ref.watch(visitedCountryCodesProvider).value ?? <String>{};
   return computeContinentStats(countries, visited);
 });
+
+/// Continents (including Antarctica) with at least one visited country,
+/// official or not.
+Set<Continent> visitedContinentsOf(
+  List<Country> countries,
+  Set<String> visitedCodes,
+) {
+  final result = <Continent>{};
+  for (final c in countries) {
+    final continent = c.continent;
+    if (continent != null && visitedCodes.contains(c.isoCode)) {
+      result.add(continent);
+    }
+  }
+  return result;
+}

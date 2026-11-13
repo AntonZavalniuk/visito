@@ -5,41 +5,19 @@ import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../models/country.dart';
+import '../../models/travel_rank.dart';
 import '../../providers/countries_provider.dart';
+import '../../models/achievement.dart';
+import '../../providers/gamification_provider.dart';
+import '../../models/timeline.dart';
+import 'achievements_section.dart';
 import 'continent_deck.dart';
+import 'timeline_section.dart';
 
 /// Modern frosted glass statistics screen visualizing travel progress,
 /// world coverage percentage, travel rank, and metric cards.
 class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
-
-  String _getTravelRank(int visited) {
-    if (visited == 0) return 'Aspiring Explorer 🌱';
-    if (visited <= 5) return 'Curious Wanderer 🎒';
-    if (visited <= 15) return 'Globetrotter ✈️';
-    if (visited <= 30) return 'World Adventurer 🧭';
-    if (visited <= 60) return 'Master Voyager 🗺️';
-    return 'Legendary Citizen of Earth 👑';
-  }
-
-  String _getRankDescription(int visited) {
-    if (visited == 0) {
-      return 'Your world journey is about to begin. Mark your first country!';
-    }
-    if (visited <= 5) {
-      return 'Great start! You are taking your first steps across the globe.';
-    }
-    if (visited <= 15) {
-      return 'Impressive wanderlust! You are collecting stamps and memories.';
-    }
-    if (visited <= 30) {
-      return 'True adventurer! You have experienced diverse cultures and places.';
-    }
-    if (visited <= 60) {
-      return 'Incredible voyager! A substantial portion of the world is familiar to you.';
-    }
-    return 'Extraordinary explorer! The whole planet is truly your home.';
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -60,6 +38,14 @@ class StatsScreen extends ConsumerWidget {
           ),
           data: (stats) {
             final continentStats = ref.watch(continentStatsProvider);
+            final timeline = computeTimeline(
+              ref.watch(visitedEntriesProvider).value ?? const {},
+              ref.watch(worldCountriesProvider).value ?? const <Country>[],
+              DateTime.now(),
+            );
+            final achievements =
+                ref.watch(achievementsProvider).value ??
+                const <AchievementStatus>[];
             final countries =
                 ref.watch(worldCountriesProvider).value ?? <Country>[];
             final visitedCodes =
@@ -174,6 +160,15 @@ class StatsScreen extends ConsumerWidget {
                       ),
                     ),
                   ],
+
+                  const SizedBox(height: 24),
+
+                  // Recent activity & streaks
+                  TimelineSection(timeline: timeline, now: DateTime.now()),
+                  if (timeline.recent.isNotEmpty) const SizedBox(height: 24),
+
+                  // Achievements
+                  AchievementsSection(statuses: achievements),
                 ],
               ),
             );
@@ -286,6 +281,16 @@ class StatsScreen extends ConsumerWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    const SizedBox(height: 3),
+                    const Text(
+                      'UN member states only',
+                      key: ValueKey('hero_scope_hint'),
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     // Animated Linear bar
                     TweenAnimationBuilder<double>(
@@ -319,49 +324,85 @@ class StatsScreen extends ConsumerWidget {
   }
 
   Widget _buildRankCard(int visited) {
-    final rank = _getTravelRank(visited);
-    final desc = _getRankDescription(visited);
+    final progress = rankProgress(visited);
 
     return GlassContainer(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       borderRadius: BorderRadius.circular(20),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.accentAmber.withValues(alpha: 0.18),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.military_tech_rounded,
-              color: AppColors.accentAmber,
-              size: 26,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.accentAmber.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.military_tech_rounded,
+                  color: AppColors.accentAmber,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      progress.current.title,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      progress.current.description,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: progress.fraction),
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) => LinearProgressIndicator(
+                key: const ValueKey('rank_progress_bar'),
+                value: value,
+                minHeight: 6,
+                backgroundColor: Colors.white.withValues(alpha: 0.1),
+                color: AppColors.accentAmber,
+              ),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  rank,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  desc,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    height: 1.3,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              progress.next == null
+                  ? 'Highest rank reached'
+                  : '${progress.remaining} more UN '
+                        '${progress.remaining == 1 ? 'country' : 'countries'}'
+                        ' to ${progress.next!.title}',
+              key: const ValueKey('rank_progress_label'),
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/layout.dart';
 import 'core/theme/app_colors.dart';
+import 'core/widgets/achievement_toast_host.dart';
 import 'core/widgets/glass_container.dart';
 import 'features/countries/countries_list_screen.dart';
 import 'features/globe/globe_screen.dart';
@@ -18,7 +19,7 @@ class VisitoApp extends StatelessWidget {
       title: 'Visito',
       debugShowCheckedModeBanner: false,
       theme: _buildDarkGlassTheme(),
-      home: const VisitoHomeShell(),
+      home: const AchievementToastHost(child: VisitoHomeShell()),
     );
   }
 

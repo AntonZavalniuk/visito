@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/country_status_tag.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../models/country.dart';
 import '../../providers/countries_provider.dart';
@@ -236,13 +237,20 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
                           vertical: 10,
                         ),
                         borderRadius: BorderRadius.circular(30),
-                        child: Text(
-                          '${s.visitedCount} / ${s.totalCount} (${s.percentage.toStringAsFixed(1)}%)',
-                          style: const TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${s.visitedCount} / ${s.totalCount} (${s.percentage.toStringAsFixed(1)}%)',
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const UnScopeBadge(),
+                          ],
                         ),
                       ),
                       orElse: () => const SizedBox.shrink(),
