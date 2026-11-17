@@ -18,7 +18,8 @@ bool isPointInPolygon(LatLng point, List<LatLng> ring) {
     final yj = ring[j].latitude;
     final xj = ring[j].longitude;
 
-    final intersect = ((yi > lat) != (yj > lat)) &&
+    final intersect =
+        ((yi > lat) != (yj > lat)) &&
         (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
 
     if (intersect) {

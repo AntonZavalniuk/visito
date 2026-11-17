@@ -201,35 +201,8 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
                   vertical: 12,
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    GlassContainer(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      borderRadius: BorderRadius.circular(30),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.public,
-                            size: 18,
-                            color: AppColors.accentCyan,
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            'Globe',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                     statsAsync.maybeWhen(
                       data: (s) => GlassContainer(
                         padding: const EdgeInsets.symmetric(

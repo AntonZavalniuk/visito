@@ -51,7 +51,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     // Verify brand pill is rendered
-    expect(find.text('Visito'), findsOneWidget);
+    expect(find.byIcon(Icons.format_list_bulleted_rounded), findsOneWidget);
 
     // Verify zoom controls exist
     expect(find.byTooltip('Zoom in'), findsOneWidget);

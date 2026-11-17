@@ -46,19 +46,19 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify app title and active map tab
-    expect(find.text('Visito'), findsOneWidget);
+    expect(find.text('Visito'), findsNothing);
     expect(find.text('Map'), findsOneWidget);
 
-    // Verify the 3 bottom navigation destinations exist
-    expect(find.byIcon(Icons.map_rounded), findsOneWidget); // Active Map icon
+    // Verify the bottom navigation destinations exist
     expect(
-      find.byIcon(Icons.format_list_bulleted_outlined),
+      find.byIcon(Icons.map_rounded),
       findsOneWidget,
-    ); // Countries
+    ); // Active Map icon
     expect(
-      find.byIcon(Icons.pie_chart_outline_rounded),
+      find.byIcon(Icons.format_list_bulleted_rounded),
       findsOneWidget,
-    ); // Stats
+    ); // Countries sheet button on the map
+    expect(find.byIcon(Icons.emoji_events_outlined), findsOneWidget); // Stats
 
     await db.close();
   });

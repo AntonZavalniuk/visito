@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
@@ -36,6 +37,15 @@ class GlassContainer extends StatelessWidget {
     this.onTap,
   });
 
+  /// Saturation boost applied to what is behind the glass (Apple-style
+  /// "vibrancy"), so colors under the blur stay lively instead of going gray.
+  static const List<double> _vibrancy = [
+    1.35, -0.18, -0.03, 0, 0, //
+    -0.09, 1.26, -0.03, 0, 0, //
+    -0.09, -0.18, 1.41, 0, 0, //
+    0, 0, 0, 1, 0,
+  ];
+
   @override
   Widget build(BuildContext context) {
     final effectiveRadius =
@@ -46,29 +56,34 @@ class GlassContainer extends StatelessWidget {
       height: height,
       padding: padding,
       decoration: BoxDecoration(
-        color: color ?? AppColors.glassBackground(0.14),
-        gradient: gradient ??
+        color: color ?? Colors.white.withValues(alpha: 0.06),
+        // Soft top-lit sheen, like light catching the glass edge.
+        gradient:
+            gradient ??
             LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
               colors: [
-                Colors.white.withValues(alpha: 0.18),
-                Colors.white.withValues(alpha: 0.05),
+                Colors.white.withValues(alpha: 0.16),
+                Colors.white.withValues(alpha: 0.03),
               ],
             ),
         borderRadius: effectiveRadius,
-        border: Border.all(
-          color: borderColor ?? AppColors.glassBorder(0.22),
-          width: borderWidth,
-        ),
-        boxShadow: shadows ??
+        boxShadow:
+            shadows ??
             [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: Colors.black.withValues(alpha: 0.28),
+                blurRadius: 24,
+                spreadRadius: -2,
+                offset: const Offset(0, 8),
               ),
             ],
+      ),
+      foregroundDecoration: _GlassEdge(
+        radius: effectiveRadius,
+        width: borderWidth,
+        solid: borderColor,
       ),
       child: child,
     );
@@ -87,7 +102,14 @@ class GlassContainer extends StatelessWidget {
     final frosted = ClipRRect(
       borderRadius: effectiveRadius,
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+        filter: ImageFilter.compose(
+          outer: const ColorFilter.matrix(_vibrancy),
+          inner: ImageFilter.blur(
+            sigmaX: blur,
+            sigmaY: blur,
+            tileMode: TileMode.mirror,
+          ),
+        ),
         child: content,
       ),
     );
@@ -96,5 +118,52 @@ class GlassContainer extends StatelessWidget {
       return Padding(padding: margin!, child: frosted);
     }
     return frosted;
+  }
+}
+
+/// Hairline edge that is bright at the top-left and bottom-right corners and
+/// fades in between, the signature rim light of Apple's glass material.
+/// A [solid] color replaces the gradient (used for tinted status surfaces).
+class _GlassEdge extends Decoration {
+  const _GlassEdge({required this.radius, required this.width, this.solid});
+
+  final BorderRadius radius;
+  final double width;
+  final Color? solid;
+
+  @override
+  BoxPainter createBoxPainter([VoidCallback? onChanged]) => _EdgePainter(this);
+}
+
+class _EdgePainter extends BoxPainter {
+  _EdgePainter(this.d);
+
+  final _GlassEdge d;
+
+  @override
+  void paint(Canvas canvas, Offset offset, ImageConfiguration cfg) {
+    final size = cfg.size;
+    if (size == null) return;
+    final rect = offset & size;
+    final rrect = d.radius.toRRect(rect).deflate(d.width / 2);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = d.width;
+    if (d.solid != null) {
+      paint.color = d.solid!;
+    } else {
+      paint.shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withValues(alpha: 0.55),
+          Colors.white.withValues(alpha: 0.08),
+          Colors.white.withValues(alpha: 0.08),
+          Colors.white.withValues(alpha: 0.30),
+        ],
+        stops: const [0, 0.35, 0.65, 1],
+      ).createShader(rect);
+    }
+    canvas.drawRRect(rrect, paint);
   }
 }

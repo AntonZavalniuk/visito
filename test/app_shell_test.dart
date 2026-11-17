@@ -31,7 +31,7 @@ class _FakeLoader extends CountryGeoJsonLoader {
 
 void main() {
   testWidgets(
-    'VisitoHomeShell navigates between Map, Countries, and Stats screens',
+    'VisitoHomeShell navigates between Map and Stats, and opens Countries sheet screens',
     (tester) async {
       final db = AppDatabase(NativeDatabase.memory());
 
@@ -51,16 +51,17 @@ void main() {
       expect(find.byType(WorldMapScreen), findsOneWidget);
       expect(find.text('Map'), findsOneWidget);
 
-      // Tap Countries tab icon
-      await tester.tap(find.byIcon(Icons.format_list_bulleted_outlined));
+      // Countries list opens as a sheet from the Map screen
+      expect(find.text('Countries'), findsNothing);
+      await tester.tap(find.byIcon(Icons.format_list_bulleted_rounded));
       await tester.pumpAndSettle();
-
-      // Countries screen should now be visible
       expect(find.byType(CountriesListScreen), findsOneWidget);
-      expect(find.text('Countries'), findsWidgets);
+      await tester.tap(find.byKey(const ValueKey('countries_sheet_close')));
+      await tester.pumpAndSettle();
+      expect(find.byType(CountriesListScreen), findsNothing);
 
       // Tap Stats tab icon
-      await tester.tap(find.byIcon(Icons.pie_chart_outline_rounded));
+      await tester.tap(find.byIcon(Icons.emoji_events_outlined));
       await tester.pumpAndSettle();
 
       // Stats screen should now be visible

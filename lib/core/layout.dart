@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 /// Approximate height of the floating bottom navigation bar.
-const double kNavBarHeight = 60;
+const double kNavBarHeight = 50;
 
 /// Gap between the bottom of the screen (above the system inset) and the navbar.
 const double kNavBarBottomMargin = 16;

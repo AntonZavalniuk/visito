@@ -5,16 +5,37 @@ import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/country_status_tag.dart';
 import '../../core/widgets/glass_container.dart';
+import '../../core/widgets/glass_icon_button.dart';
 import '../../models/country.dart';
 import '../../providers/countries_provider.dart';
 import '../../providers/database_provider.dart';
 
-enum CountryFilter { all, visited, unvisited }
+/// Slides the countries list up over the current screen.
+Future<void> showCountriesSheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: AppColors.backgroundDark,
+    clipBehavior: Clip.antiAlias,
+    constraints: const BoxConstraints(maxWidth: double.infinity),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (ctx) => FractionallySizedBox(
+      heightFactor: 1,
+      child: CountriesListScreen(onClose: () => Navigator.of(ctx).pop()),
+    ),
+  );
+}
 
 /// Alphabetical, searchable country list screen with glassmorphic cards,
 /// animated filter chips, and interactive visited toggles.
 class CountriesListScreen extends ConsumerStatefulWidget {
-  const CountriesListScreen({super.key});
+  const CountriesListScreen({super.key, this.onClose});
+
+  /// When set, the screen renders as a sheet: a drag handle and a close button.
+  final VoidCallback? onClose;
 
   @override
   ConsumerState<CountriesListScreen> createState() =>
@@ -23,7 +44,6 @@ class CountriesListScreen extends ConsumerStatefulWidget {
 
 class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  CountryFilter _currentFilter = CountryFilter.all;
   String _searchQuery = '';
 
   /// Titles of continent groups the user collapsed.
@@ -55,17 +75,7 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
           country.name.toLowerCase().contains(_searchQuery) ||
           country.isoCode.toLowerCase().contains(_searchQuery);
 
-      if (!matchesSearch) return false;
-
-      final isVisited = visitedCodes.contains(country.isoCode);
-      switch (_currentFilter) {
-        case CountryFilter.all:
-          return true;
-        case CountryFilter.visited:
-          return isVisited;
-        case CountryFilter.unvisited:
-          return !isVisited;
-      }
+      return matchesSearch;
     }).toList();
   }
 
@@ -94,13 +104,7 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
     ({int visited, int total}) countsFor(bool Function(Country) inGroup) {
       final all = allCountries.where(inGroup).toList();
       final visited = all.where((c) => visitedCodes.contains(c.isoCode)).length;
-      // Under the Unvisited filter the counter shows unvisited / total.
-      return (
-        visited: _currentFilter == CountryFilter.unvisited
-            ? all.length - visited
-            : visited,
-        total: all.length,
-      );
+      return (visited: visited, total: all.length);
     }
 
     final items = <Object>[];
@@ -184,18 +188,11 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
   Widget build(BuildContext context) {
     final countriesAsync = ref.watch(worldCountriesProvider);
     final visitedCodesAsync = ref.watch(visitedCountryCodesProvider);
-    final statsAsync = ref.watch(worldStatsProvider);
 
-    // Chip counters describe the list below (all entries), while the header
-    // pill shows the official (UN member) stats.
-    final allListCountries = countriesAsync.value;
-    final visitedListCount = allListCountries
+    // Counts every list entry (incl. disputed & observer), not UN-only.
+    final visitedListCount = countriesAsync.value
         ?.where((c) => (visitedCodesAsync.value ?? {}).contains(c.isoCode))
         .length;
-    final unvisitedListCount =
-        allListCountries == null || visitedListCount == null
-        ? null
-        : allListCountries.length - visitedListCount;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -203,6 +200,16 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
         bottom: false,
         child: Column(
           children: [
+            if (widget.onClose != null)
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             // Header & Search
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -210,43 +217,42 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Countries',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      statsAsync.when(
-                        data: (stats) => GlassContainer(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.onClose != null ? 'Select' : 'Countries',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: widget.onClose != null ? 20 : 28,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            if (visitedListCount != null)
                               Text(
-                                '${stats.visitedCount} / ${stats.totalCount}',
+                                'Visited: $visitedListCount of ${countriesAsync.value!.length}',
+                                key: const ValueKey('visited_summary'),
                                 style: const TextStyle(
-                                  color: AppColors.primaryLight,
-                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textSecondary,
                                   fontSize: 13,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              const UnScopeBadge(),
-                            ],
-                          ),
+                          ],
                         ),
-                        loading: () => const SizedBox.shrink(),
-                        error: (err, stack) => const SizedBox.shrink(),
                       ),
+                      if (widget.onClose != null)
+                        GlassIconButton(
+                          key: const ValueKey('countries_sheet_close'),
+                          icon: Icons.close_rounded,
+                          tooltip: 'Close',
+                          size: 38,
+                          iconSize: 20,
+                          onTap: widget.onClose!,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -290,44 +296,6 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 10),
-
-                  // Filter Chips
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildFilterChip(
-                          title: 'All',
-                          filter: CountryFilter.all,
-                          count: countriesAsync.value?.length,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildFilterChip(
-                          title: 'Visited',
-                          filter: CountryFilter.visited,
-                          count: visitedListCount,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildFilterChip(
-                          title: 'Unvisited',
-                          filter: CountryFilter.unvisited,
-                          count: unvisitedListCount,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Counts include disputed & observer entries',
-                    key: ValueKey('list_scope_hint'),
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -367,7 +335,9 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                       16,
                       4,
                       16,
-                      navBarClearance(context),
+                      widget.onClose != null
+                          ? MediaQuery.paddingOf(context).bottom + 16
+                          : navBarClearance(context),
                     ),
                     itemCount: items.length,
                     itemBuilder: (context, index) {
@@ -384,72 +354,6 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                 },
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChip({
-    required String title,
-    required CountryFilter filter,
-    int? count,
-  }) {
-    final isSelected = _currentFilter == filter;
-
-    return GestureDetector(
-      key: ValueKey('filter_${filter.name}'),
-      onTap: () => setState(() => _currentFilter = filter),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.28)
-              : Colors.white.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.primaryLight
-                : Colors.white.withValues(alpha: 0.12),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                color: isSelected
-                    ? AppColors.primaryLight
-                    : AppColors.textSecondary,
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-            if (count != null) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.primary.withValues(alpha: 0.4)
-                      : Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    color: isSelected
-                        ? AppColors.textPrimary
-                        : AppColors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),

@@ -93,21 +93,8 @@ void main() {
       // Verify Brazil shows visited subtitle
       expect(find.text('Visited'), findsWidgets);
 
-      // Filter by Visited chip using explicit key
-      await tester.tap(find.byKey(const ValueKey('filter_visited')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Brazil'), findsOneWidget);
-      expect(find.text('Canada'), findsNothing);
-      expect(find.text('Japan'), findsNothing);
-
-      // Filter by Unvisited chip
-      await tester.tap(find.byKey(const ValueKey('filter_unvisited')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Brazil'), findsNothing);
-      expect(find.text('Canada'), findsOneWidget);
-      expect(find.text('Japan'), findsOneWidget);
+      // Summary counts every list entry, not UN-only.
+      expect(find.text('Visited: 1 of 3'), findsOneWidget);
 
       await db.close();
     },
@@ -142,9 +129,7 @@ void main() {
     await db.close();
   });
 
-  testWidgets('group header shows visited / continent total under filters', (
-    tester,
-  ) async {
+  testWidgets('group header shows visited / continent total', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     await db
         .into(db.visitedCountries)
@@ -161,46 +146,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('1 / 3'), findsWidgets);
-
-    await tester.tap(find.byKey(const ValueKey('filter_visited')));
-    await tester.pumpAndSettle();
-    expect(find.text('Brazil'), findsNothing);
-    // Header still reads 1 / 3, not 1 / 1.
-    expect(find.text('1 / 3'), findsWidgets);
-    expect(find.text('1 / 1'), findsNothing);
-
-    // Unvisited filter counts unvisited countries: 2 of 3.
-    await tester.tap(find.byKey(const ValueKey('filter_unvisited')));
-    await tester.pumpAndSettle();
-    expect(find.text('2 / 3'), findsWidgets);
-
-    await db.close();
-  });
-
-  testWidgets('scope hints explain which counters include what', (
-    tester,
-  ) async {
-    final db = AppDatabase(NativeDatabase.memory());
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          databaseProvider.overrideWithValue(db),
-          countryGeoJsonLoaderProvider.overrideWithValue(const _FakeLoader()),
-        ],
-        child: const MaterialApp(home: CountriesListScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // Header pill: official (UN) counter.
-    expect(find.text('UN'), findsWidgets);
-    // Filter chips count everything, including disputed & observers.
-    expect(find.byKey(const ValueKey('list_scope_hint')), findsOneWidget);
-    expect(
-      find.text('Counts include disputed & observer entries'),
-      findsOneWidget,
-    );
+    expect(find.text('Visited: 1 of 3'), findsOneWidget);
 
     await db.close();
   });
