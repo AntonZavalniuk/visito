@@ -6,6 +6,7 @@ import 'core/widgets/achievement_toast_host.dart';
 import 'core/widgets/glass_container.dart';
 import 'features/globe/globe_screen.dart';
 import 'features/map/world_map_screen.dart';
+import 'features/profile/profile_screen.dart';
 import 'features/stats/stats_screen.dart';
 
 /// Root application widget configuring dark glass theme and home shell.
@@ -62,6 +63,7 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
     WorldMapScreen(),
     GlobeScreen(),
     StatsScreen(),
+    ProfileScreen(),
   ];
 
   @override
@@ -125,6 +127,12 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
             label: 'Stats',
             icon: Icons.emoji_events_outlined,
             activeIcon: Icons.emoji_events_rounded,
+          ),
+          _buildNavItem(
+            index: 3,
+            label: 'Profile',
+            icon: Icons.person_outline_rounded,
+            activeIcon: Icons.person_rounded,
           ),
         ],
       ),

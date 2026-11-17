@@ -69,6 +69,11 @@ void main() {
       expect(find.text('Stats'), findsWidgets);
       expect(find.text('Travel Stats'), findsOneWidget);
 
+      // Tap Profile tab icon
+      await tester.tap(find.byIcon(Icons.person_outline_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text('DISPUTED TERRITORIES'), findsOneWidget);
+
       // Tap Map tab icon
       await tester.tap(find.byIcon(Icons.map_outlined));
       await tester.pumpAndSettle();

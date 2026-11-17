@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:visito/data/country_geo_loader.dart';
 import 'package:visito/data/database.dart';
+import 'package:visito/data/territories.dart';
 import 'package:visito/features/countries/countries_list_screen.dart';
 import 'package:visito/models/country.dart';
 import 'package:visito/providers/database_provider.dart';
@@ -48,11 +49,24 @@ class _FakeLoader extends CountryGeoJsonLoader {
   }
 }
 
+/// List-only top-level entries: the extra countries plus Somaliland, which is
+/// an independent state by default.
+final int _extraCount = extraCountrySpecs.length + 1;
+
+void _tallView(WidgetTester tester) {
+  tester.view.physicalSize = const Size(800, 6000);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
 void main() {
+  _somaliaTests();
   testWidgets(
     'CountriesListScreen displays list, searches, and toggles visited',
     (tester) async {
       final db = AppDatabase(NativeDatabase.memory());
+      _tallView(tester);
+      _tallView(tester);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -90,11 +104,11 @@ void main() {
       await tester.tap(find.text('Brazil'));
       await tester.pumpAndSettle();
 
-      // Verify Brazil shows visited subtitle
-      expect(find.text('Visited'), findsWidgets);
+      // Verify Brazil shows a check mark
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
 
-      // Summary counts every list entry, not UN-only.
-      expect(find.text('Visited: 1 of 3'), findsOneWidget);
+      // Summary counts countries (not territories), not UN-only.
+      expect(find.text('Visited: 1 of ${3 + _extraCount}'), findsOneWidget);
 
       await db.close();
     },
@@ -102,6 +116,7 @@ void main() {
 
   testWidgets('continent groups can be collapsed and expanded', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
+    _tallView(tester);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -131,6 +146,7 @@ void main() {
 
   testWidgets('group header shows visited / continent total', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
+    _tallView(tester);
     await db
         .into(db.visitedCountries)
         .insert(VisitedCountriesCompanion.insert(isoCode: 'JP'));
@@ -146,7 +162,129 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('1 / 3'), findsWidgets);
-    expect(find.text('Visited: 1 of 3'), findsOneWidget);
+    expect(find.text('Visited: 1 of ${3 + _extraCount}'), findsOneWidget);
+
+    await db.close();
+  });
+
+  testWidgets('territories are nested and marked separately', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    _tallView(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          countryGeoJsonLoaderProvider.overrideWithValue(
+            const _TerritoryLoader(),
+          ),
+        ],
+        child: const MaterialApp(home: CountriesListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gibraltar'), findsOneWidget);
+    expect(find.text('Kosovo'), findsOneWidget);
+    expect(find.text('Visited: 0 of ${1 + _extraCount}'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('territory_GI')));
+    await tester.pumpAndSettle();
+    expect(await db.select(db.visitedCountries).get(), hasLength(1));
+    // Territory visits do not count towards the country summary.
+    expect(find.text('Visited: 0 of ${1 + _extraCount}'), findsOneWidget);
+
+    // Searching a territory keeps its parent country visible.
+    await tester.enterText(find.byType(TextField), 'gibr');
+    await tester.pumpAndSettle();
+    expect(find.text('United Kingdom'), findsOneWidget);
+    expect(find.text('Gibraltar'), findsOneWidget);
+    expect(find.text('Anguilla'), findsNothing);
+
+    await db.close();
+  });
+}
+
+class _TerritoryLoader extends CountryGeoJsonLoader {
+  const _TerritoryLoader();
+
+  @override
+  Future<List<Country>> loadFromBundle([dynamic bundle]) async => [
+    Country(
+      isoCode: 'GB',
+      name: 'United Kingdom',
+      continent: Continent.europe,
+      unMember: true,
+      polygons: [
+        [const LatLng(50, 0), const LatLng(51, 0), const LatLng(50, 1)],
+      ],
+    ),
+  ];
+}
+
+class _SomaliaLoader extends CountryGeoJsonLoader {
+  const _SomaliaLoader();
+
+  @override
+  Future<List<Country>> loadFromBundle([dynamic bundle]) async => [
+    Country(
+      isoCode: 'SO',
+      name: 'Somalia',
+      continent: Continent.africa,
+      unMember: true,
+      polygons: [
+        [const LatLng(2, 45), const LatLng(3, 45), const LatLng(2, 46)],
+      ],
+    ),
+    Country(
+      isoCode: 'XSL',
+      name: 'Somaliland',
+      continent: Continent.africa,
+      disputed: true,
+      polygons: [
+        [const LatLng(9, 44), const LatLng(10, 44), const LatLng(9, 45)],
+      ],
+    ),
+  ];
+}
+
+void _somaliaTests() {
+  testWidgets('Somaliland as part of Somalia is disabled and follows it', (
+    tester,
+  ) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    _tallView(tester);
+    await db
+        .into(db.appSettings)
+        .insert(
+          AppSettingsCompanion.insert(
+            key: 'disputed.XSL',
+            value: 'partOfParent',
+          ),
+        );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          countryGeoJsonLoaderProvider.overrideWithValue(
+            const _SomaliaLoader(),
+          ),
+        ],
+        child: const MaterialApp(home: CountriesListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Disabled: tapping the nested row writes nothing.
+    await tester.tap(find.byKey(const ValueKey('territory_XSL')));
+    await tester.pumpAndSettle();
+    expect(await db.select(db.visitedCountries).get(), isEmpty);
+    expect(find.byIcon(Icons.check_rounded), findsNothing);
+
+    // Marking Somalia marks both rows (derived check on Somaliland).
+    await tester.tap(find.byKey(const ValueKey('SO')));
+    await tester.pumpAndSettle();
+    expect(await db.select(db.visitedCountries).get(), hasLength(1));
+    expect(find.byIcon(Icons.check_rounded), findsNWidgets(2));
 
     await db.close();
   });

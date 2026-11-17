@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/country.dart';
+import '../../models/list_entry.dart';
 import '../theme/app_colors.dart';
 
 /// Small outlined badge describing a country's status: DISP (disputed),
@@ -26,9 +27,10 @@ class CountryStatusTag extends StatelessWidget {
     return null;
   }
 
-  static Color _colorFor(String label) => switch (label) {
+  static Color colorForLabel(String label) => switch (label) {
     'DISP' => AppColors.textSecondary,
     'UN' => AppColors.accentCyan,
+    'NMS' => AppColors.textSecondary,
     _ => AppColors.primaryLight,
   };
 
@@ -36,7 +38,24 @@ class CountryStatusTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = labelFor(country, showUnMember: showUnMember);
     if (label == null) return const SizedBox.shrink();
-    return StatusBadge(label: label, color: _colorFor(label));
+    return StatusBadge(label: label, color: colorForLabel(label));
+  }
+}
+
+/// Status badge for a [ListEntry]; renders nothing for entries without one
+/// (e.g. territories).
+class EntryStatusTag extends StatelessWidget {
+  const EntryStatusTag({super.key, required this.status});
+
+  final EntryStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    if (status == EntryStatus.none) return const SizedBox.shrink();
+    return StatusBadge(
+      label: status.label,
+      color: CountryStatusTag.colorForLabel(status.label),
+    );
   }
 }
 

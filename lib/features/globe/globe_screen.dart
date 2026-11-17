@@ -127,8 +127,14 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
   ) async {
     final geo = _viewFor(size).unproject(d.localPosition);
     if (geo == null) return;
-    final country = findCountryAtPoint(LatLng(geo.lat, geo.lng), countries);
-    if (country == null) return;
+    final tapped = findCountryAtPoint(LatLng(geo.lat, geo.lng), countries);
+    if (tapped == null) return;
+    // A territory that follows its parent acts as the parent (Somaliland).
+    final country = resolveTapTarget(
+      tapped,
+      ref.read(listEntriesProvider),
+      countries,
+    );
 
     // Same behavior as the Map tab: tapping toggles visited status.
     _showMessage(country.name, !visited.contains(country.isoCode));
@@ -179,7 +185,7 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
                         size: size,
                         painter: GlobePainter(
                           rings: rings,
-                          visited: visited,
+                          visited: ref.watch(paintedCodesProvider),
                           view: _viewFor(size),
                           relief: _relief,
                         ),

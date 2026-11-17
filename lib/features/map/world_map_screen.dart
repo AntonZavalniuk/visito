@@ -149,8 +149,14 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
     List<Country> countries,
     Set<String> visitedCodes,
   ) async {
-    final country = findCountryAtPoint(point, countries);
-    if (country == null) return;
+    final tapped = findCountryAtPoint(point, countries);
+    if (tapped == null) return;
+    // A territory that follows its parent acts as the parent (Somaliland).
+    final country = resolveTapTarget(
+      tapped,
+      ref.read(listEntriesProvider),
+      countries,
+    );
 
     final isCurrentlyVisited = visitedCodes.contains(country.isoCode);
     final nextState = !isCurrentlyVisited;
@@ -245,7 +251,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                         drawInSingleWorld: true,
                         polygons: _buildCountryPolygons(
                           countries,
-                          visitedCodes,
+                          ref.watch(paintedCodesProvider),
                         ),
                       ),
                     ],

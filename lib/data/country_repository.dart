@@ -69,4 +69,25 @@ class CountryRepository {
       await deleteQuery.go();
     }
   }
+
+  /// When [isoCode] was marked as visited, or null if it isn't.
+  Future<DateTime?> visitedAt(String isoCode) async {
+    final query = _db.select(_db.visitedCountries)
+      ..where((tbl) => tbl.isoCode.equals(isoCode));
+    return (await query.getSingleOrNull())?.visitedAt;
+  }
+
+  /// Marks [isoCode] as visited with an explicit timestamp [at], replacing
+  /// any existing mark.
+  Future<void> markVisitedAt(String isoCode, DateTime at) {
+    return _db
+        .into(_db.visitedCountries)
+        .insert(
+          VisitedCountriesCompanion.insert(
+            isoCode: isoCode,
+            visitedAt: Value(at),
+          ),
+          mode: InsertMode.insertOrReplace,
+        );
+  }
 }
