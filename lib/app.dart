@@ -4,7 +4,6 @@ import 'core/layout.dart';
 import 'core/theme/app_colors.dart';
 import 'core/widgets/achievement_toast_host.dart';
 import 'core/widgets/glass_container.dart';
-import 'features/countries/countries_list_screen.dart';
 import 'features/globe/globe_screen.dart';
 import 'features/map/world_map_screen.dart';
 import 'features/stats/stats_screen.dart';
@@ -62,7 +61,6 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
   final List<Widget> _screens = const [
     WorldMapScreen(),
     GlobeScreen(),
-    CountriesListScreen(),
     StatsScreen(),
   ];
 
@@ -90,12 +88,8 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
                   24,
                   kNavBarBottomMargin,
                 ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 380),
-                    child: _buildFloatingGlassNavBar(),
-                  ),
-                ),
+                // Hugs its content: a compact pill, not a full-width bar.
+                child: Center(child: _buildFloatingGlassNavBar()),
               ),
             ),
           ),
@@ -106,21 +100,13 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
 
   Widget _buildFloatingGlassNavBar() {
     return GlassContainer(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      borderRadius: BorderRadius.circular(32),
-      blur: 24,
-      // Solid dark background — fully opaque so items are always visible
-      color: AppColors.backgroundNavy.withValues(alpha: 0.95),
-      borderColor: Colors.white.withValues(alpha: 0.14),
-      shadows: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.55),
-          blurRadius: 32,
-          offset: const Offset(0, 8),
-        ),
-      ],
+      padding: const EdgeInsets.all(3),
+      borderRadius: BorderRadius.circular(26),
+      blur: 28,
+      // Dark tint keeps icons legible while the map still shows through.
+      color: AppColors.backgroundNavy.withValues(alpha: 0.45),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisSize: MainAxisSize.min,
         children: [
           _buildNavItem(
             index: 0,
@@ -131,20 +117,14 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
           _buildNavItem(
             index: 1,
             label: 'Globe',
-            icon: Icons.public_outlined,
-            activeIcon: Icons.public,
+            icon: Icons.language_rounded,
+            activeIcon: Icons.language_rounded,
           ),
           _buildNavItem(
             index: 2,
-            label: 'Countries',
-            icon: Icons.format_list_bulleted_outlined,
-            activeIcon: Icons.format_list_bulleted_rounded,
-          ),
-          _buildNavItem(
-            index: 3,
             label: 'Stats',
-            icon: Icons.pie_chart_outline_rounded,
-            activeIcon: Icons.pie_chart_rounded,
+            icon: Icons.emoji_events_outlined,
+            activeIcon: Icons.emoji_events_rounded,
           ),
         ],
       ),
@@ -169,45 +149,43 @@ class _VisitoHomeShellState extends State<VisitoHomeShell> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
-        padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 18 : 14,
-          vertical: 10,
-        ),
+        width: 72,
+        padding: const EdgeInsets.symmetric(vertical: 5),
         decoration: BoxDecoration(
+          // Selected tab is a lighter glass capsule floating in the bar.
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.25)
+              ? Colors.white.withValues(alpha: 0.16)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-          border: isSelected
-              ? Border.all(
-                  color: AppColors.primaryLight.withValues(alpha: 0.5),
-                  width: 1,
-                )
-              : Border.all(color: Colors.transparent, width: 1),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isSelected
+                ? Colors.white.withValues(alpha: 0.28)
+                : Colors.transparent,
+            width: 0.8,
+          ),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               isSelected ? activeIcon : icon,
-              size: 20,
-              // Inactive items: bright white so they're visible on dark bg
+              size: 21,
               color: isSelected
-                  ? AppColors.primaryLight
-                  : Colors.white.withValues(alpha: 0.65),
+                  ? AppColors.visitedAmberLight
+                  : Colors.white.withValues(alpha: 0.6),
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
-                ),
+            const SizedBox(height: 1),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected
+                    ? AppColors.visitedAmberLight
+                    : Colors.white.withValues(alpha: 0.6),
+                fontSize: 10.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: 0.2,
               ),
-            ],
+            ),
           ],
         ),
       ),

@@ -44,10 +44,10 @@ class CountryRepository {
         ..where((tbl) => tbl.isoCode.equals(isoCode));
       await deleteQuery.go();
     } else {
-      await _db.into(_db.visitedCountries).insert(
-            VisitedCountriesCompanion.insert(
-              isoCode: isoCode,
-            ),
+      await _db
+          .into(_db.visitedCountries)
+          .insert(
+            VisitedCountriesCompanion.insert(isoCode: isoCode),
             mode: InsertMode.insertOrReplace,
           );
     }
@@ -57,10 +57,10 @@ class CountryRepository {
   Future<void> setVisited(String isoCode, bool visited) async {
     final exists = await isVisited(isoCode);
     if (visited && !exists) {
-      await _db.into(_db.visitedCountries).insert(
-            VisitedCountriesCompanion.insert(
-              isoCode: isoCode,
-            ),
+      await _db
+          .into(_db.visitedCountries)
+          .insert(
+            VisitedCountriesCompanion.insert(isoCode: isoCode),
             mode: InsertMode.insertOrReplace,
           );
     } else if (!visited && exists) {

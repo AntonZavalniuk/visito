@@ -5,9 +5,5 @@ import 'app.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    const ProviderScope(
-      child: VisitoApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: VisitoApp()));
 }

@@ -8,9 +8,9 @@ import 'package:latlong2/latlong.dart';
 
 import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/country_status_tag.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/glass_icon_button.dart';
+import '../countries/countries_list_screen.dart';
 import '../../models/country.dart';
 import '../../providers/countries_provider.dart';
 import '../../providers/database_provider.dart';
@@ -186,7 +186,6 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
   Widget build(BuildContext context) {
     final countriesAsync = ref.watch(worldCountriesProvider);
     final visitedCodesAsync = ref.watch(visitedCountryCodesProvider);
-    final statsAsync = ref.watch(worldStatsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -266,79 +265,12 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                   vertical: 12,
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Brand Pill
-                    GlassContainer(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      borderRadius: BorderRadius.circular(30),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: const BoxDecoration(
-                              color: AppColors.primaryLight,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary,
-                                  blurRadius: 8,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            'Visito',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Stats badge
-                    statsAsync.when(
-                      data: (stats) => GlassContainer(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        borderRadius: BorderRadius.circular(30),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.public,
-                              size: 16,
-                              color: AppColors.accentCyan,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${stats.visitedCount} / ${stats.totalCount} (${stats.percentage.toStringAsFixed(1)}%)',
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const UnScopeBadge(),
-                          ],
-                        ),
-                      ),
-                      loading: () => const SizedBox.shrink(),
-                      error: (err, stack) => const SizedBox.shrink(),
+                    // Countries list button
+                    GlassIconButton(
+                      icon: Icons.format_list_bulleted_rounded,
+                      tooltip: 'Countries',
+                      onTap: () => showCountriesSheet(context),
                     ),
                   ],
                 ),
