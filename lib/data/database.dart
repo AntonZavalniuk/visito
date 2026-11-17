@@ -12,12 +12,29 @@ class VisitedCountries extends Table {
   Set<Column> get primaryKey => {isoCode};
 }
 
-@DriftDatabase(tables: [VisitedCountries])
+/// Simple key/value store for user settings (e.g. disputed-territory choices).
+class AppSettings extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
+@DriftDatabase(tables: [VisitedCountries, AppSettings])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) await m.createTable(appSettings);
+    },
+  );
 }
 
 QueryExecutor _openConnection() {

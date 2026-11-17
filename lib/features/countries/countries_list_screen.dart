@@ -4,11 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/country_status_tag.dart';
+import '../../core/widgets/flag_badge.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/glass_icon_button.dart';
 import '../../models/country.dart';
+import '../../models/list_entry.dart';
 import '../../providers/countries_provider.dart';
 import '../../providers/database_provider.dart';
+
+/// Height shared by every row of the list.
+const double _rowHeight = 52;
 
 /// Slides the countries list up over the current screen.
 Future<void> showCountriesSheet(BuildContext context) {
@@ -65,18 +70,28 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
     super.dispose();
   }
 
-  List<Country> _filterCountries(
-    List<Country> allCountries,
-    Set<String> visitedCodes,
-  ) {
-    return allCountries.where((country) {
-      final matchesSearch =
-          _searchQuery.isEmpty ||
-          country.name.toLowerCase().contains(_searchQuery) ||
-          country.isoCode.toLowerCase().contains(_searchQuery);
+  /// Keeps entries matching the search. A country stays when one of its
+  /// territories matches (with just those territories); a country that matches
+  /// itself keeps all its territories.
+  List<ListEntry> _filterEntries(List<ListEntry> all) {
+    bool matches(ListEntry e) =>
+        _searchQuery.isEmpty ||
+        e.name.toLowerCase().contains(_searchQuery) ||
+        e.code.toLowerCase().contains(_searchQuery);
+    if (_searchQuery.isEmpty) return all;
 
-      return matchesSearch;
-    }).toList();
+    final result = <ListEntry>[];
+    for (final top in all.where((e) => !e.isTerritory)) {
+      final kids = all.where((e) => e.parentCode == top.code).toList();
+      final topMatches = matches(top);
+      final shownKids = topMatches ? kids : kids.where(matches).toList();
+      if (topMatches || shownKids.isNotEmpty) {
+        result
+          ..add(top)
+          ..addAll(shownKids);
+      }
+    }
+    return result;
   }
 
   /// While searching, every matching group stays expanded so results are
@@ -90,51 +105,52 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
     });
   }
 
-  /// Flattens [countries] into continent headers followed by their countries.
-  /// Continents without matching countries are omitted.
+  /// Flattens [entries] into continent headers followed by their countries
+  /// and nested territories. Continents without matches are omitted.
   ///
-  /// Header counters show count / total for the whole continent in
-  /// [allCountries]: visited / total, or unvisited / total under the
-  /// Unvisited filter. Search does not change them.
+  /// Header counters show visited / total countries (territories excluded)
+  /// for the whole continent in [allEntries]. Search does not change them.
   List<Object> _buildGroupedItems(
-    List<Country> countries,
-    List<Country> allCountries,
+    List<ListEntry> entries,
+    List<ListEntry> allEntries,
     Set<String> visitedCodes,
   ) {
-    ({int visited, int total}) countsFor(bool Function(Country) inGroup) {
-      final all = allCountries.where(inGroup).toList();
-      final visited = all.where((c) => visitedCodes.contains(c.isoCode)).length;
+    ({int visited, int total}) countsFor(Continent? continent) {
+      final all = allEntries
+          .where(
+            (e) => !e.isTerritory && _continentOf(e, allEntries) == continent,
+          )
+          .toList();
+      final visited = all.where((e) => visitedCodes.contains(e.code)).length;
       return (visited: visited, total: all.length);
     }
 
     final items = <Object>[];
-    for (final continent in Continent.values) {
-      final group = countries.where((c) => c.continent == continent).toList();
+    final groups = <Continent?>[...Continent.values, null];
+    for (final continent in groups) {
+      final group = entries
+          .where((e) => _continentOf(e, allEntries) == continent)
+          .toList();
       if (group.isEmpty) continue;
-      final counts = countsFor((c) => c.continent == continent);
-      items.add(
-        _ContinentHeader(
-          continent: continent,
-          visited: counts.visited,
-          total: counts.total,
-        ),
+      final counts = countsFor(continent);
+      final header = _ContinentHeader(
+        continent: continent,
+        visited: counts.visited,
+        total: counts.total,
       );
-      if (!_isCollapsed(continent.label)) items.addAll(group);
-    }
-    // Countries without a known continent are listed last.
-    final other = countries.where((c) => c.continent == null).toList();
-    if (other.isNotEmpty) {
-      final counts = countsFor((c) => c.continent == null);
-      items.add(
-        _ContinentHeader(
-          label: 'Other',
-          visited: counts.visited,
-          total: counts.total,
-        ),
-      );
-      if (!_isCollapsed('Other')) items.addAll(other);
+      items.add(header);
+      if (!_isCollapsed(header.title)) items.addAll(group);
     }
     return items;
+  }
+
+  /// Territories are grouped under their parent country's continent.
+  static Continent? _continentOf(ListEntry e, List<ListEntry> all) {
+    if (!e.isTerritory) return e.continent;
+    for (final p in all) {
+      if (p.code == e.parentCode) return p.continent;
+    }
+    return e.continent;
   }
 
   Widget _buildContinentHeader(_ContinentHeader header) {
@@ -168,7 +184,7 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
             ),
             const Spacer(),
             Tooltip(
-              message: 'Incl. disputed & observer',
+              message: 'Countries only; incl. disputed, observer & non-member',
               child: Text(
                 '${header.visited} / ${header.total}',
                 style: const TextStyle(
@@ -188,11 +204,17 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
   Widget build(BuildContext context) {
     final countriesAsync = ref.watch(worldCountriesProvider);
     final visitedCodesAsync = ref.watch(visitedCountryCodesProvider);
+    final allEntries = ref.watch(listEntriesProvider);
+    final painted = ref.watch(paintedCodesProvider);
 
-    // Counts every list entry (incl. disputed & observer), not UN-only.
-    final visitedListCount = countriesAsync.value
-        ?.where((c) => (visitedCodesAsync.value ?? {}).contains(c.isoCode))
-        .length;
+    // Counts countries only (incl. disputed, observer & non-member);
+    // territories are marked separately and not counted here.
+    final topEntries = allEntries.where((e) => !e.isTerritory).toList();
+    final visitedListCount = countriesAsync.hasValue
+        ? topEntries
+              .where((e) => (visitedCodesAsync.value ?? {}).contains(e.code))
+              .length
+        : null;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -233,7 +255,7 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                             ),
                             if (visitedListCount != null)
                               Text(
-                                'Visited: $visitedListCount of ${countriesAsync.value!.length}',
+                                'Visited: $visitedListCount of ${topEntries.length}',
                                 key: const ValueKey('visited_summary'),
                                 style: const TextStyle(
                                   color: AppColors.textSecondary,
@@ -316,9 +338,9 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                     style: const TextStyle(color: Colors.redAccent),
                   ),
                 ),
-                data: (allCountries) {
+                data: (_) {
                   final visitedCodes = visitedCodesAsync.value ?? <String>{};
-                  final filtered = _filterCountries(allCountries, visitedCodes);
+                  final filtered = _filterEntries(allEntries);
 
                   if (filtered.isEmpty) {
                     return _buildEmptyState();
@@ -326,7 +348,7 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
 
                   final items = _buildGroupedItems(
                     filtered,
-                    allCountries,
+                    allEntries,
                     visitedCodes,
                   );
 
@@ -345,10 +367,10 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                       if (item is _ContinentHeader) {
                         return _buildContinentHeader(item);
                       }
-                      final country = item as Country;
-                      final isVisited = visitedCodes.contains(country.isoCode);
+                      final entry = item as ListEntry;
+                      final isVisited = painted.contains(entry.code);
 
-                      return _buildCountryTile(country, isVisited);
+                      return _buildEntryTile(entry, isVisited);
                     },
                   );
                 },
@@ -360,112 +382,85 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
     );
   }
 
-  Widget _buildCountryTile(Country country, bool isVisited) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        child: GlassContainer(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          borderRadius: BorderRadius.circular(16),
-          color: isVisited
-              ? AppColors.primaryDark.withValues(alpha: 0.22)
-              : AppColors.glassBackground(0.08),
-          borderColor: isVisited
-              ? AppColors.primaryLight.withValues(alpha: 0.45)
-              : AppColors.glassBorder(0.12),
-          onTap: () {
-            ref.read(countryRepositoryProvider).toggleVisited(country.isoCode);
-          },
-          child: Row(
-            children: [
-              // ISO Code pill
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: isVisited
-                      ? AppColors.primary.withValues(alpha: 0.28)
-                      : Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isVisited
-                        ? AppColors.primaryLight.withValues(alpha: 0.6)
-                        : Colors.white.withValues(alpha: 0.12),
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    country.isoCode,
-                    style: TextStyle(
-                      color: isVisited
-                          ? AppColors.primaryLight
-                          : AppColors.textSecondary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-
-              // Country Name
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            country.name,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        if (CountryStatusTag.labelFor(country) != null) ...[
-                          const SizedBox(width: 8),
-                          CountryStatusTag(country: country),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isVisited ? 'Visited' : 'Not visited yet',
+  /// Row for a country or territory: flag, name, status badge and a check
+  /// mark when visited. Every row has the same height; territories are
+  /// indented under their parent with a dotted tree connector.
+  Widget _buildEntryTile(ListEntry entry, bool isVisited) {
+    final tile = GlassContainer(
+      key: ValueKey(entry.isTerritory ? 'territory_${entry.code}' : entry.code),
+      height: _rowHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      borderRadius: BorderRadius.circular(14),
+      color: isVisited
+          ? AppColors.primaryDark.withValues(alpha: 0.22)
+          : AppColors.glassBackground(entry.isTerritory ? 0.05 : 0.08),
+      borderColor: isVisited
+          ? AppColors.primaryLight.withValues(alpha: 0.45)
+          : AppColors.glassBorder(entry.isTerritory ? 0.10 : 0.12),
+      // A territory that follows its parent is marked through the parent.
+      onTap: entry.followsParent
+          ? null
+          : () => ref.read(countryRepositoryProvider).toggleVisited(entry.code),
+      // Full width so the check mark sits at the trailing edge.
+      child: SizedBox(
+        width: double.infinity,
+        child: Row(
+          children: [
+            FlagBadge(code: entry.code),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      entry.name,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: isVisited
                             ? AppColors.primaryLight
-                            : AppColors.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                            : (entry.isTerritory
+                                  ? AppColors.textSecondary
+                                  : AppColors.textPrimary),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                  ),
+                  if (entry.status != EntryStatus.none) ...[
+                    const SizedBox(width: 8),
+                    EntryStatusTag(status: entry.status),
                   ],
-                ),
+                ],
               ),
-
-              // Animated Switch Toggle
-              Switch.adaptive(
-                value: isVisited,
-                activeThumbColor: AppColors.primaryLight,
-                activeTrackColor: AppColors.primaryDark,
-                inactiveThumbColor: Colors.white70,
-                inactiveTrackColor: Colors.white.withValues(alpha: 0.15),
-                onChanged: (_) {
-                  ref
-                      .read(countryRepositoryProvider)
-                      .toggleVisited(country.isoCode);
-                },
+            ),
+            if (isVisited)
+              const Icon(
+                Icons.check_rounded,
+                color: AppColors.primaryLight,
+                size: 22,
               ),
-            ],
-          ),
+          ],
         ),
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Opacity(
+        opacity: entry.followsParent ? 0.55 : 1,
+        child: entry.isTerritory
+            ? Row(
+                children: [
+                  const SizedBox(width: 14),
+                  const SizedBox(
+                    width: 22,
+                    height: _rowHeight,
+                    child: CustomPaint(painter: _TreeConnectorPainter()),
+                  ),
+                  Expanded(child: tile),
+                ],
+              )
+            : tile,
       ),
     );
   }
@@ -536,4 +531,27 @@ class _ContinentHeader {
   final String title;
   final int visited;
   final int total;
+}
+
+/// Dotted elbow joining a territory row to its parent country.
+class _TreeConnectorPainter extends CustomPainter {
+  const _TreeConnectorPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.textMuted
+      ..strokeWidth = 1;
+    const dash = 2.0;
+    final midY = size.height / 2;
+    for (double y = 0; y < midY; y += dash * 2) {
+      canvas.drawLine(Offset(2, y), Offset(2, y + dash), paint);
+    }
+    for (double x = 2; x < size.width - 2; x += dash * 2) {
+      canvas.drawLine(Offset(x, midY), Offset(x + dash, midY), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
