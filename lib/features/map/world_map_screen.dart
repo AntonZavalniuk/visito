@@ -469,7 +469,7 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
               ),
-              onPressed: () => ref.invalidate(worldCountriesProvider),
+              onPressed: () => ref.invalidate(rawCountriesProvider),
               child: const Text('Retry'),
             ),
           ],

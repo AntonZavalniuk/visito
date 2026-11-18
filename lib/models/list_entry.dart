@@ -22,6 +22,7 @@ class ListEntry {
     required this.name,
     required this.status,
     this.continent,
+    this.extraContinents = const {},
     this.parentCode,
   });
 
@@ -29,6 +30,11 @@ class ListEntry {
   final String name;
   final EntryStatus status;
   final Continent? continent;
+
+  /// Further continents the entry is listed under (see [Country]).
+  final Set<Continent> extraContinents;
+
+  Set<Continent> get continents => {?continent, ...extraContinents};
 
   /// ISO code of the country this territory belongs to; null for countries.
   final String? parentCode;
@@ -109,6 +115,7 @@ List<ListEntry> buildListEntries(
           name: spec.name,
           status: spec.status,
           continent: c.continent ?? spec.continent,
+          extraContinents: c.extraContinents,
         ),
       );
     } else if (spec != null) {
@@ -118,6 +125,7 @@ List<ListEntry> buildListEntries(
           name: spec.name,
           status: spec.status,
           continent: c.continent ?? spec.continent,
+          extraContinents: c.extraContinents,
           parentCode: spec.parentCode,
         ),
       );
@@ -128,6 +136,7 @@ List<ListEntry> buildListEntries(
           name: c.name,
           status: statusOf(c),
           continent: c.continent,
+          extraContinents: c.extraContinents,
         ),
       );
     }

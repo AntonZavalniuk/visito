@@ -3,14 +3,35 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/territories.dart';
+import '../data/transcontinental.dart';
 import '../models/country.dart';
 import '../models/list_entry.dart';
 import 'database_provider.dart';
 
 /// Loads and parses the world countries GeoJSON dataset once.
-final worldCountriesProvider = FutureProvider<List<Country>>((ref) async {
+final rawCountriesProvider = FutureProvider<List<Country>>((ref) async {
   final loader = ref.watch(countryGeoJsonLoaderProvider);
   return loader.loadFromBundle();
+});
+
+/// The countries with the user's continent choices applied to the
+/// transcontinental ones (see [transcontinentalChoicesProvider]).
+final worldCountriesProvider = FutureProvider<List<Country>>((ref) async {
+  final raw = await ref.watch(rawCountriesProvider.future);
+  final own = ref.watch(transcontinentalChoicesProvider);
+  // A territory (e.g. an independent Northern Cyprus) is listed on the same
+  // continents as its parent country.
+  final choices = {
+    ...own,
+    for (final t in territorySpecs)
+      if (own.containsKey(t.parentCode)) t.code: own[t.parentCode]!,
+  };
+  return [
+    for (final c in raw)
+      choices.containsKey(c.isoCode)
+          ? applyTranscontinental(c, choices[c.isoCode]!)
+          : c,
+  ];
 });
 
 /// Streams the set of visited country ISO codes in real time from SQLite.
@@ -124,7 +145,7 @@ List<ContinentStats> computeContinentStats(
   final result = <ContinentStats>[];
   for (final continent in Continent.values) {
     final official = countries
-        .where((c) => c.unMember && c.continent == continent)
+        .where((c) => c.unMember && c.continents.contains(continent))
         .toList();
     if (official.isEmpty) continue;
     result.add(
@@ -153,12 +174,66 @@ Set<Continent> visitedContinentsOf(
 ) {
   final result = <Continent>{};
   for (final c in countries) {
-    final continent = c.continent;
-    if (continent != null && visitedCodes.contains(c.isoCode)) {
-      result.add(continent);
-    }
+    if (visitedCodes.contains(c.isoCode)) result.addAll(c.continents);
   }
   return result;
+}
+
+/// All stored settings, streamed.
+final settingsStreamProvider = StreamProvider<Map<String, String>>((ref) {
+  return ref.watch(settingsRepositoryProvider).watchAll();
+});
+
+/// Settings key holding the continent choice for transcontinental [code].
+String transcontinentalSettingKey(String code) => 'transcontinental.$code';
+
+/// Continent choice used until the user picks one.
+const TranscontinentalChoice kDefaultTranscontinentalChoice =
+    TranscontinentalChoice.both;
+
+/// The continent choice per transcontinental country; falls back to the
+/// default while settings load so the list does not flash.
+final transcontinentalChoicesProvider =
+    Provider<Map<String, TranscontinentalChoice>>((ref) {
+      final all = ref.watch(settingsStreamProvider).value ?? const {};
+      return {
+        for (final t in transcontinentalSpecs)
+          t.code: switch (all[transcontinentalSettingKey(t.code)]) {
+            'europe' => TranscontinentalChoice.europe,
+            'asia' => TranscontinentalChoice.asia,
+            'both' => TranscontinentalChoice.both,
+            _ => kDefaultTranscontinentalChoice,
+          },
+      };
+    });
+
+/// Applies [choice] to a transcontinental country: a single continent, or
+/// its own plus the other one when "both".
+Country applyTranscontinental(Country c, TranscontinentalChoice choice) {
+  final base = c.continent;
+  if (base == null) return c;
+  switch (choice) {
+    case TranscontinentalChoice.europe:
+      return c.withContinents(Continent.europe, const {});
+    case TranscontinentalChoice.asia:
+      return c.withContinents(Continent.asia, const {});
+    case TranscontinentalChoice.both:
+      return c.withContinents(
+        base,
+        {Continent.europe, Continent.asia}.difference({base}),
+      );
+  }
+}
+
+/// Saves the continent choice for transcontinental country [code].
+Future<void> setTranscontinentalChoice(
+  WidgetRef ref,
+  String code,
+  TranscontinentalChoice choice,
+) {
+  return ref
+      .read(settingsRepositoryProvider)
+      .setValue(transcontinentalSettingKey(code), choice.name);
 }
 
 /// Settings key holding the alignment choice for disputed territory [code].

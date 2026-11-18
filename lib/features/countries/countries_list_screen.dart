@@ -118,7 +118,9 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
     ({int visited, int total}) countsFor(Continent? continent) {
       final all = allEntries
           .where(
-            (e) => !e.isTerritory && _continentOf(e, allEntries) == continent,
+            (e) =>
+                !e.isTerritory &&
+                _continentsOf(e, allEntries).contains(continent),
           )
           .toList();
       final visited = all.where((e) => visitedCodes.contains(e.code)).length;
@@ -129,7 +131,7 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
     final groups = <Continent?>[...Continent.values, null];
     for (final continent in groups) {
       final group = entries
-          .where((e) => _continentOf(e, allEntries) == continent)
+          .where((e) => _continentsOf(e, allEntries).contains(continent))
           .toList();
       if (group.isEmpty) continue;
       final counts = countsFor(continent);
@@ -144,13 +146,17 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
     return items;
   }
 
-  /// Territories are grouped under their parent country's continent.
-  static Continent? _continentOf(ListEntry e, List<ListEntry> all) {
-    if (!e.isTerritory) return e.continent;
-    for (final p in all) {
-      if (p.code == e.parentCode) return p.continent;
+  /// Territories are grouped under their parent country's continents; a
+  /// transcontinental country appears in each of its continents. Entries
+  /// without a continent land in the null ("Other") group.
+  static Set<Continent?> _continentsOf(ListEntry e, List<ListEntry> all) {
+    var continents = e.continents;
+    if (e.isTerritory) {
+      for (final p in all) {
+        if (p.code == e.parentCode) continents = p.continents;
+      }
     }
-    return e.continent;
+    return continents.isEmpty ? {null} : continents;
   }
 
   Widget _buildContinentHeader(_ContinentHeader header) {

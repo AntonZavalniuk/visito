@@ -7,6 +7,7 @@ import '../../core/widgets/country_status_tag.dart';
 import '../../core/widgets/flag_badge.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../data/territories.dart';
+import '../../data/transcontinental.dart';
 import '../../models/country.dart';
 import '../../models/list_entry.dart';
 import '../../providers/countries_provider.dart';
@@ -22,6 +23,7 @@ class ProfileScreen extends ConsumerWidget {
         ref.watch(disputedAlignmentProvider).value ??
         const <String, DisputedAlignment>{};
     final countries = ref.watch(worldCountriesProvider).value ?? <Country>[];
+    final transcontinental = ref.watch(transcontinentalChoicesProvider);
     final alignable = territorySpecs.where((t) => t.alignable).toList();
 
     String parentName(TerritorySpec t) {
@@ -94,6 +96,49 @@ class ProfileScreen extends ConsumerWidget {
                             kDefaultDisputedAlignment,
                         onChanged: (a) =>
                             setDisputedAlignment(ref, alignable[i].code, a),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'TRANSCONTINENTAL',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Continents to include dual-continent countries in.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              GlassContainer(
+                padding: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(18),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < transcontinentalSpecs.length; i++) ...[
+                      if (i > 0)
+                        Divider(
+                          height: 1,
+                          thickness: 0.6,
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      _TranscontinentalRow(
+                        spec: transcontinentalSpecs[i],
+                        choice:
+                            transcontinental[transcontinentalSpecs[i].code] ??
+                            kDefaultTranscontinentalChoice,
+                        onChanged: (c) => setTranscontinentalChoice(
+                          ref,
+                          transcontinentalSpecs[i].code,
+                          c,
+                        ),
                       ),
                     ],
                   ],
@@ -276,6 +321,152 @@ class _DisputedRow extends StatelessWidget {
                 size: 22,
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One row of the transcontinental list: flag, name and the current choice;
+/// tapping opens a sheet with the options.
+class _TranscontinentalRow extends StatelessWidget {
+  const _TranscontinentalRow({
+    required this.spec,
+    required this.choice,
+    required this.onChanged,
+  });
+
+  final TranscontinentalSpec spec;
+  final TranscontinentalChoice choice;
+  final ValueChanged<TranscontinentalChoice> onChanged;
+
+  static String _label(TranscontinentalChoice c) => switch (c) {
+    TranscontinentalChoice.both => 'Both',
+    TranscontinentalChoice.europe => 'Europe',
+    TranscontinentalChoice.asia => 'Asia',
+  };
+
+  Future<void> _openSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: AppColors.backgroundDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                FlagBadge(code: spec.code),
+                const SizedBox(width: 12),
+                Text(
+                  spec.name,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            for (final option in TranscontinentalChoice.values) ...[
+              GlassContainer(
+                key: ValueKey('${spec.code}_trans_${option.name}'),
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                borderRadius: BorderRadius.circular(14),
+                color: option == choice
+                    ? AppColors.primaryDark.withValues(alpha: 0.22)
+                    : AppColors.glassBackground(0.05),
+                borderColor: option == choice
+                    ? AppColors.primaryLight.withValues(alpha: 0.45)
+                    : AppColors.glassBorder(0.10),
+                onTap: () {
+                  onChanged(option);
+                  Navigator.of(ctx).pop();
+                },
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _label(option),
+                          style: TextStyle(
+                            color: option == choice
+                                ? AppColors.primaryLight
+                                : AppColors.textSecondary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (option == choice)
+                        const Icon(
+                          Icons.check_rounded,
+                          color: AppColors.primaryLight,
+                          size: 22,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: ValueKey('${spec.code}_trans_header'),
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => _openSheet(context),
+      child: SizedBox(
+        height: 56,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
+            children: [
+              FlagBadge(code: spec.code),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  spec.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                _label(choice),
+                key: ValueKey('${spec.code}_trans_value'),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.unfold_more_rounded,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
         ),
       ),
     );
