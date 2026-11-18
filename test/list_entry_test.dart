@@ -16,6 +16,7 @@ Country _c(String iso, String name, {bool un = true}) => Country(
 );
 
 void main() {
+  continentsTest();
   test('territories nest under parent and extras are top-level', () {
     final entries = buildListEntries(
       [
@@ -126,5 +127,27 @@ void main() {
       independentCodes: {'XSL'},
     );
     expect(resolveTapTarget(xsl, independent, [so, xsl]), xsl);
+  });
+}
+
+void continentsTest() {
+  test('an independent territory keeps its extra continents', () {
+    final entries = buildListEntries(
+      [
+        Country(
+          isoCode: 'XNC',
+          name: 'Northern Cyprus',
+          continent: Continent.asia,
+          extraContinents: {Continent.europe},
+          disputed: true,
+          polygons: const [],
+        ),
+      ],
+      territories: territorySpecs,
+      extras: const [],
+      independentCodes: {'XNC'},
+    );
+    final nc = entries.firstWhere((e) => e.code == 'XNC');
+    expect(nc.continents, {Continent.asia, Continent.europe});
   });
 }

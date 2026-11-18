@@ -49,9 +49,10 @@ class _FakeLoader extends CountryGeoJsonLoader {
   }
 }
 
-/// List-only top-level entries: the extra countries plus Somaliland, which is
-/// an independent state by default.
-final int _extraCount = extraCountrySpecs.length + 1;
+/// List-only top-level entries: the extra countries plus the alignable
+/// disputed territories (e.g. Somaliland), independent by default.
+final int _extraCount =
+    extraCountrySpecs.length + territorySpecs.where((t) => t.alignable).length;
 
 void _tallView(WidgetTester tester) {
   tester.view.physicalSize = const Size(800, 6000);

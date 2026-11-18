@@ -35,6 +35,8 @@ class _Loader extends CountryGeoJsonLoader {
 }
 
 void main() {
+  transcontinentalTests();
+  northernCyprusTests();
   test('SettingsRepository stores and replaces values', () async {
     final db = AppDatabase(NativeDatabase.memory());
     final repo = SettingsRepository(db);
@@ -62,7 +64,8 @@ void main() {
 
     expect(find.text('Somaliland'), findsOneWidget);
     // The row shows the current choice; options live in a sheet.
-    expect(find.text('Independent state'), findsOneWidget);
+    expect(find.byKey(const ValueKey('XNC_header')), findsOneWidget);
+    expect(find.text('Independent state'), findsNWidgets(2));
     expect(find.byKey(const ValueKey('XSL_part')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('XSL_header')));
     await tester.pumpAndSettle();
@@ -220,5 +223,121 @@ void main() {
       expect(await marks(db), isEmpty);
       await db.close();
     });
+  });
+}
+
+class _TransLoader extends CountryGeoJsonLoader {
+  const _TransLoader();
+
+  @override
+  Future<List<Country>> loadFromBundle([dynamic bundle]) async => [
+    Country(
+      isoCode: 'TR',
+      name: 'Turkey',
+      continent: Continent.asia,
+      unMember: true,
+      polygons: [
+        [const LatLng(0, 0), const LatLng(0, 1), const LatLng(1, 1)],
+      ],
+    ),
+  ];
+}
+
+void transcontinentalTests() {
+  testWidgets('transcontinental choice changes the continents of a country', (
+    tester,
+  ) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          countryGeoJsonLoaderProvider.overrideWithValue(const _TransLoader()),
+        ],
+        child: const MaterialApp(home: ProfileScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ProfileScreen)),
+    );
+    Set<Continent> turkey() => container
+        .read(worldCountriesProvider)
+        .requireValue
+        .firstWhere((c) => c.isoCode == 'TR')
+        .continents;
+
+    expect(find.text('TRANSCONTINENTAL'), findsOneWidget);
+    expect(turkey(), {Continent.asia, Continent.europe});
+
+    await tester.tap(find.byKey(const ValueKey('TR_trans_header')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('TR_trans_europe')));
+    await tester.pumpAndSettle();
+    expect(turkey(), {Continent.europe});
+    expect(find.text('Europe'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('TR_trans_header')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('TR_trans_asia')));
+    await tester.pumpAndSettle();
+    expect(turkey(), {Continent.asia});
+
+    await db.close();
+  });
+}
+
+class _CyprusLoader extends CountryGeoJsonLoader {
+  const _CyprusLoader();
+
+  @override
+  Future<List<Country>> loadFromBundle([dynamic bundle]) async => [
+    for (final (iso, name) in [('CY', 'Cyprus'), ('XNC', 'Northern Cyprus')])
+      Country(
+        isoCode: iso,
+        name: name,
+        continent: Continent.asia,
+        unMember: iso == 'CY',
+        disputed: iso == 'XNC',
+        polygons: [
+          [const LatLng(0, 0), const LatLng(0, 1), const LatLng(1, 1)],
+        ],
+      ),
+  ];
+}
+
+void northernCyprusTests() {
+  testWidgets('Northern Cyprus follows the continents chosen for Cyprus', (
+    tester,
+  ) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          countryGeoJsonLoaderProvider.overrideWithValue(const _CyprusLoader()),
+        ],
+        child: const MaterialApp(home: ProfileScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ProfileScreen)),
+    );
+    Set<Continent> continents(String code) => container
+        .read(worldCountriesProvider)
+        .requireValue
+        .firstWhere((c) => c.isoCode == code)
+        .continents;
+
+    expect(continents('XNC'), {Continent.asia, Continent.europe});
+    await tester.tap(find.byKey(const ValueKey('CY_trans_header')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('CY_trans_europe')));
+    await tester.pumpAndSettle();
+    expect(continents('CY'), {Continent.europe});
+    expect(continents('XNC'), {Continent.europe});
+
+    await db.close();
   });
 }

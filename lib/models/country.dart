@@ -31,6 +31,13 @@ class Country {
   final String name;
   final Continent? continent;
 
+  /// Further continents the country is also counted in (transcontinental
+  /// countries set to "both").
+  final Set<Continent> extraContinents;
+
+  /// Every continent the country belongs to.
+  Set<Continent> get continents => {?continent, ...extraContinents};
+
   /// Territory whose sovereignty is disputed; shown with a DISP badge.
   final bool disputed;
 
@@ -50,6 +57,7 @@ class Country {
     required this.name,
     required this.polygons,
     this.continent,
+    this.extraContinents = const {},
     this.disputed = false,
     this.unMember = false,
     this.unObserver = false,
@@ -61,6 +69,22 @@ class Country {
        maxLat = maxLat ?? _computeMaxLat(polygons),
        minLng = minLng ?? _computeMinLng(polygons),
        maxLng = maxLng ?? _computeMaxLng(polygons);
+
+  /// Copy with a different continent assignment (same geometry).
+  Country withContinents(Continent? continent, Set<Continent> extra) => Country(
+    isoCode: isoCode,
+    name: name,
+    polygons: polygons,
+    continent: continent,
+    extraContinents: extra,
+    disputed: disputed,
+    unMember: unMember,
+    unObserver: unObserver,
+    minLat: minLat,
+    maxLat: maxLat,
+    minLng: minLng,
+    maxLng: maxLng,
+  );
 
   static double _computeMinLat(List<List<LatLng>> polys) {
     if (polys.isEmpty) return 0;
