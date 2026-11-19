@@ -65,7 +65,7 @@ void main() {
     expect(find.text('Somaliland'), findsOneWidget);
     // The row shows the current choice; options live in a sheet.
     expect(find.byKey(const ValueKey('XNC_header')), findsOneWidget);
-    expect(find.text('Independent state'), findsNWidgets(2));
+    expect(find.text('Independent state'), findsNWidgets(4));
     expect(find.byKey(const ValueKey('XSL_part')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('XSL_header')));
     await tester.pumpAndSettle();
@@ -310,6 +310,9 @@ void northernCyprusTests() {
   testWidgets('Northern Cyprus follows the continents chosen for Cyprus', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final db = AppDatabase(NativeDatabase.memory());
     await tester.pumpWidget(
       ProviderScope(
