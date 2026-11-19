@@ -41,28 +41,13 @@ class CountryGeoJsonLoader {
       final geomType = geometry['type']?.toString();
       final coordinates = geometry['coordinates'];
       final polygons = <List<LatLng>>[];
+      final holes = <List<LatLng>>[];
 
       if (geomType == 'Polygon' && coordinates is List) {
-        for (final ring in coordinates) {
-          if (ring is List && ring.isNotEmpty) {
-            final points = _parseRing(ring);
-            if (points.isNotEmpty) {
-              polygons.add(points);
-            }
-          }
-        }
+        _addRings(coordinates, polygons, holes);
       } else if (geomType == 'MultiPolygon' && coordinates is List) {
         for (final poly in coordinates) {
-          if (poly is List) {
-            for (final ring in poly) {
-              if (ring is List && ring.isNotEmpty) {
-                final points = _parseRing(ring);
-                if (points.isNotEmpty) {
-                  polygons.add(points);
-                }
-              }
-            }
-          }
+          if (poly is List) _addRings(poly, polygons, holes);
         }
       }
 
@@ -76,6 +61,7 @@ class CountryGeoJsonLoader {
             unMember: properties['UN_MEMBER'] == true,
             unObserver: properties['UN_OBSERVER'] == true,
             polygons: polygons,
+            holes: holes,
           ),
         );
       }
@@ -119,6 +105,21 @@ class CountryGeoJsonLoader {
     }
 
     return fallbackName;
+  }
+
+  /// The first ring of a GeoJSON polygon is its outline, the rest are holes.
+  static void _addRings(
+    List<dynamic> rings,
+    List<List<LatLng>> polygons,
+    List<List<LatLng>> holes,
+  ) {
+    for (var i = 0; i < rings.length; i++) {
+      final ring = rings[i];
+      if (ring is! List || ring.isEmpty) continue;
+      final points = _parseRing(ring);
+      if (points.isEmpty) continue;
+      (i == 0 ? polygons : holes).add(points);
+    }
   }
 
   static List<LatLng> _parseRing(List<dynamic> ring) {

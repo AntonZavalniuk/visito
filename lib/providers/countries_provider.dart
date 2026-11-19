@@ -303,6 +303,8 @@ Set<String> paintedCodesOf(List<ListEntry> entries, Set<String> visitedCodes) {
       if (!followers.containsKey(code)) code,
     for (final f in followers.entries)
       if (visitedCodes.contains(f.value)) f.key,
+    for (final e in entries)
+      if (e.paintsWithParent && visitedCodes.contains(e.parentCode)) e.code,
   };
 }
 

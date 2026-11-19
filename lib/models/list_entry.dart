@@ -24,6 +24,7 @@ class ListEntry {
     this.continent,
     this.extraContinents = const {},
     this.parentCode,
+    this.paintsWithParent = false,
   });
 
   final String code;
@@ -38,6 +39,10 @@ class ListEntry {
 
   /// ISO code of the country this territory belongs to; null for countries.
   final String? parentCode;
+
+  /// A territory that is also painted whenever its parent is marked (the
+  /// constituent countries of the United Kingdom), yet can be marked itself.
+  final bool paintsWithParent;
 
   bool get isTerritory => parentCode != null;
 
@@ -59,6 +64,7 @@ class TerritorySpec {
     this.continent, {
     this.status = EntryStatus.none,
     this.alignable = false,
+    this.paintsWithParent = false,
   });
 
   final String code;
@@ -67,6 +73,9 @@ class TerritorySpec {
   /// Whether the user can choose to treat this territory as an independent
   /// state instead of a part of its parent (see [DisputedAlignment]).
   final bool alignable;
+
+  /// See [ListEntry.paintsWithParent].
+  final bool paintsWithParent;
   final String name;
   final String parentCode;
   final Continent continent;
@@ -127,6 +136,7 @@ List<ListEntry> buildListEntries(
           continent: c.continent ?? spec.continent,
           extraContinents: c.extraContinents,
           parentCode: spec.parentCode,
+          paintsWithParent: spec.paintsWithParent,
         ),
       );
     } else {
@@ -175,6 +185,7 @@ List<ListEntry> buildListEntries(
         status: t.status,
         continent: t.continent,
         parentCode: t.parentCode,
+        paintsWithParent: t.paintsWithParent,
       ),
     );
   }

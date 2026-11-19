@@ -34,7 +34,10 @@ class GlobeRing {
 
   static List<GlobeRing> fromCountries(List<Country> countries) {
     final rings = <GlobeRing>[];
-    for (final country in countries) {
+    // Large countries first so enclaves (Lesotho) are painted on top.
+    double span(Country c) => (c.maxLat - c.minLat) * (c.maxLng - c.minLng);
+    final ordered = [...countries]..sort((a, b) => span(b).compareTo(span(a)));
+    for (final country in ordered) {
       for (final ring in country.polygons) {
         if (ring.length < 3) continue;
         final n = ring.length;

@@ -34,12 +34,16 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
   static const double _southLat = -58;
   static const double _maxZoomLevel = 9.0;
 
+  /// Screen distance (px) within which a tap picks a tiny country marker.
+  static const double _tinyMarkerHitRadius = 14;
+
   // Shifts the fitted view horizontally: positive moves the map to the left.
   static const double _centerLngOffset = 0;
 
   double _fitZoom = 1.5;
   LatLng _fitCenter = const LatLng(20, 0);
   bool _zoomedIn = false;
+  double _zoom = 0;
 
   static double _mercY(double lat) =>
       math.log(math.tan(math.pi / 4 + lat * math.pi / 360));
@@ -79,8 +83,13 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
 
   void _onPositionChanged(MapCamera camera, bool hasGesture) {
     final zoomed = camera.zoom > _fitZoom + 0.01;
-    if (zoomed != _zoomedIn) {
-      setState(() => _zoomedIn = zoomed);
+    // Quantized so tiny-country markers update without rebuilding every frame.
+    final zoom = (camera.zoom * 4).round() / 4;
+    if (zoomed != _zoomedIn || zoom != _zoom) {
+      setState(() {
+        _zoomedIn = zoomed;
+        _zoom = zoom;
+      });
     }
   }
 
@@ -149,7 +158,9 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
     List<Country> countries,
     Set<String> visitedCodes,
   ) async {
-    final tapped = findCountryAtPoint(point, countries);
+    final tapped =
+        findCountryAtPoint(point, countries) ??
+        _tinyCountryNear(point, countries);
     if (tapped == null) return;
     // A territory that follows its parent acts as the parent (Somaliland).
     final country = resolveTapTarget(
@@ -163,6 +174,56 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
 
     _showMessage(country.name, nextState);
     await ref.read(countryRepositoryProvider).toggleVisited(country.isoCode);
+  }
+
+  /// Countries too small to see or hit at map scale (Vatican City, Monaco).
+  static bool _isTiny(Country c) =>
+      math.max(c.maxLat - c.minLat, c.maxLng - c.minLng) < 0.5;
+
+  /// The tiny country whose marker lies within a fingertip of [point].
+  Country? _tinyCountryNear(LatLng point, List<Country> countries) {
+    final camera = _mapController.camera;
+    final tap = camera.latLngToScreenOffset(point);
+    Country? best;
+    var bestDistance = _tinyMarkerHitRadius;
+    for (final c in countries) {
+      if (!_isTiny(c)) continue;
+      final d = (camera.latLngToScreenOffset(c.center) - tap).distance;
+      if (d < bestDistance) {
+        best = c;
+        bestDistance = d;
+      }
+    }
+    return best;
+  }
+
+  /// Marker dot radius (px); a country smaller than this on screen gets one.
+  static const double _markerRadius = 5;
+
+  /// Whether [c]'s polygon is currently too small on screen to see.
+  bool _isTinyOnScreen(Country c) {
+    final span = math.max(c.maxLat - c.minLat, c.maxLng - c.minLng);
+    final pixels = span / 360 * 256 * math.pow(2, _zoom);
+    return pixels < _markerRadius * 2;
+  }
+
+  /// Fixed-size dots for visited tiny countries, shown only while their
+  /// polygons are too small to see (they vanish once zoomed in far enough).
+  List<CircleMarker> _buildTinyMarkers(
+    List<Country> countries,
+    Set<String> painted,
+  ) {
+    return [
+      for (final c in countries)
+        if (_isTiny(c) && _isTinyOnScreen(c) && painted.contains(c.isoCode))
+          CircleMarker(
+            point: c.center,
+            radius: _markerRadius,
+            color: AppColors.visitedFill(0.95),
+            borderColor: AppColors.backgroundNavy,
+            borderStrokeWidth: 1.4,
+          ),
+    ];
   }
 
   void _zoomIn() {
@@ -250,6 +311,12 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                         // Never repeat the world horizontally on wide screens.
                         drawInSingleWorld: true,
                         polygons: _buildCountryPolygons(
+                          countries,
+                          ref.watch(paintedCodesProvider),
+                        ),
+                      ),
+                      CircleLayer(
+                        circles: _buildTinyMarkers(
                           countries,
                           ref.watch(paintedCodesProvider),
                         ),
@@ -389,6 +456,10 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
         polygons.add(
           Polygon(
             points: ring,
+            holePointsList: [
+              for (final hole in country.holes)
+                if (isPointInPolygon(hole.first, ring)) hole,
+            ],
             color: fillColor,
             borderColor: strokeColor,
             borderStrokeWidth: strokeWidth,

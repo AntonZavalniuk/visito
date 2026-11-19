@@ -47,6 +47,10 @@ class Country {
   /// UN non-member observer state; shown with an OBS badge.
   final bool unObserver;
   final List<List<LatLng>> polygons;
+
+  /// Interior rings: areas inside [polygons] that belong to someone else
+  /// (e.g. Lesotho inside South Africa).
+  final List<List<LatLng>> holes;
   final double minLat;
   final double maxLat;
   final double minLng;
@@ -56,6 +60,7 @@ class Country {
     required this.isoCode,
     required this.name,
     required this.polygons,
+    this.holes = const [],
     this.continent,
     this.extraContinents = const {},
     this.disputed = false,
@@ -75,6 +80,7 @@ class Country {
     isoCode: isoCode,
     name: name,
     polygons: polygons,
+    holes: holes,
     continent: continent,
     extraContinents: extra,
     disputed: disputed,

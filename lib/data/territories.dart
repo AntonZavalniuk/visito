@@ -33,10 +33,10 @@ const List<TerritorySpec> territorySpecs = [
   TerritorySpec('JE', 'Jersey', 'GB', _eu),
   TerritorySpec('IM', 'Isle of Man', 'GB', _eu),
   // Constituent countries (user-assigned codes, not ISO 3166-1).
-  TerritorySpec('XEN', 'England', 'GB', _eu),
-  TerritorySpec('XSC', 'Scotland', 'GB', _eu),
-  TerritorySpec('XWA', 'Wales', 'GB', _eu),
-  TerritorySpec('XNI', 'Northern Ireland', 'GB', _eu),
+  TerritorySpec('XEN', 'England', 'GB', _eu, paintsWithParent: true),
+  TerritorySpec('XSC', 'Scotland', 'GB', _eu, paintsWithParent: true),
+  TerritorySpec('XWA', 'Wales', 'GB', _eu, paintsWithParent: true),
+  TerritorySpec('XNI', 'Northern Ireland', 'GB', _eu, paintsWithParent: true),
   // France.
   TerritorySpec('GP', 'Guadeloupe', 'FR', _na),
   TerritorySpec('MQ', 'Martinique', 'FR', _na),
