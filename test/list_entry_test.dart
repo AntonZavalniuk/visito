@@ -27,6 +27,7 @@ void main() {
       ],
       territories: territorySpecs,
       extras: extraCountrySpecs,
+      independentCodes: {'XK'},
     );
     final codes = entries.map((e) => e.code).toList();
     final gb = codes.indexOf('GB');

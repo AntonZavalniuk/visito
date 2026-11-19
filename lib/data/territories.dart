@@ -102,6 +102,23 @@ const List<TerritorySpec> territorySpecs = [
     status: EntryStatus.disputed,
     alignable: true,
   ),
+  // Serbia and Moldova: breakaway states, same alignment choice.
+  TerritorySpec(
+    'XK',
+    'Kosovo',
+    'RS',
+    _eu,
+    status: EntryStatus.disputed,
+    alignable: true,
+  ),
+  TerritorySpec(
+    'XTR',
+    'Transnistria',
+    'MD',
+    _eu,
+    status: EntryStatus.disputed,
+    alignable: true,
+  ),
   // Finland.
   TerritorySpec('AX', 'Åland Islands', 'FI', _eu),
 ];
@@ -111,8 +128,6 @@ const List<TerritorySpec> territorySpecs = [
 const List<ExtraCountrySpec> extraCountrySpecs = [
   ExtraCountrySpec('CK', 'Cook Islands', EntryStatus.nonMember, _oc),
   ExtraCountrySpec('NU', 'Niue', EntryStatus.nonMember, _oc),
-  ExtraCountrySpec('XK', 'Kosovo', EntryStatus.disputed, _eu),
   ExtraCountrySpec('XAB', 'Abkhazia', EntryStatus.disputed, _as),
   ExtraCountrySpec('XSO', 'South Ossetia', EntryStatus.disputed, _as),
-  ExtraCountrySpec('XTR', 'Transnistria', EntryStatus.disputed, _eu),
 ];
