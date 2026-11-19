@@ -40,6 +40,11 @@ bool isPointInCountry(LatLng point, Country country) {
     return false;
   }
 
+  // Inside a hole the point belongs to another country (Lesotho in South Africa).
+  for (final hole in country.holes) {
+    if (isPointInPolygon(point, hole)) return false;
+  }
+
   for (final ring in country.polygons) {
     if (isPointInPolygon(point, ring)) {
       return true;

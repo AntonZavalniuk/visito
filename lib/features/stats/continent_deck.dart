@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart' show LatLng;
 
 import '../../core/theme/app_colors.dart';
 import '../../models/country.dart';
@@ -560,24 +561,32 @@ class _SilhouettePainter extends CustomPainter {
       ..strokeWidth = 0.6
       ..color = outline;
 
-    final path = Path();
+    void addRing(Path path, List<LatLng> ring) {
+      for (var i = 0; i < ring.length; i++) {
+        final o = project(ring[i].latitude, ring[i].longitude);
+        if (i == 0) {
+          path.moveTo(o.dx, o.dy);
+        } else {
+          path.lineTo(o.dx, o.dy);
+        }
+      }
+      path.close();
+    }
+
+    // One path per country: even-odd fill cuts holes (an enclave such as
+    // Lesotho inside South Africa) without cancelling neighbouring countries.
     for (final country in countries) {
       if (country.continent != continent) continue;
+      final path = Path()..fillType = PathFillType.evenOdd;
       for (final ring in country.polygons) {
-        for (var i = 0; i < ring.length; i++) {
-          final p = ring[i];
-          final o = project(p.latitude, p.longitude);
-          if (i == 0) {
-            path.moveTo(o.dx, o.dy);
-          } else {
-            path.lineTo(o.dx, o.dy);
-          }
-        }
-        path.close();
+        addRing(path, ring);
       }
+      for (final hole in country.holes) {
+        addRing(path, hole);
+      }
+      canvas.drawPath(path, fill);
+      canvas.drawPath(path, stroke);
     }
-    canvas.drawPath(path, fill);
-    canvas.drawPath(path, stroke);
     canvas.restore();
   }
 

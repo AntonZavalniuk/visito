@@ -16,6 +16,7 @@ Country _c(String iso, String name, {bool un = true}) => Country(
 );
 
 void main() {
+  paintsWithParentTest();
   continentsTest();
   test('territories nest under parent and extras are top-level', () {
     final entries = buildListEntries(
@@ -149,5 +150,32 @@ void continentsTest() {
     );
     final nc = entries.firstWhere((e) => e.code == 'XNC');
     expect(nc.continents, {Continent.asia, Continent.europe});
+  });
+}
+
+void paintsWithParentTest() {
+  test('constituent countries are painted with the UK and on their own', () {
+    final entries = buildListEntries(
+      [
+        Country(
+          isoCode: 'GB',
+          name: 'United Kingdom',
+          continent: Continent.europe,
+          unMember: true,
+          polygons: const [],
+        ),
+        for (final (c, n) in [('XEN', 'England'), ('XSC', 'Scotland')])
+          Country(
+            isoCode: c,
+            name: n,
+            continent: Continent.europe,
+            polygons: const [],
+          ),
+      ],
+      territories: territorySpecs,
+      extras: const [],
+    );
+    expect(paintedCodesOf(entries, {'GB'}), containsAll(['GB', 'XEN', 'XSC']));
+    expect(paintedCodesOf(entries, {'XEN'}), {'XEN'});
   });
 }
