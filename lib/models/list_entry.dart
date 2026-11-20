@@ -25,7 +25,12 @@ class ListEntry {
     this.extraContinents = const {},
     this.parentCode,
     this.paintsWithParent = false,
+    this.hidden = false,
   });
+
+  /// Not shown in the countries list; it is configured in the Profile tab and
+  /// only appears on the map and globe.
+  final bool hidden;
 
   final String code;
   final String name;
@@ -52,8 +57,9 @@ class ListEntry {
   bool get followsParent => isTerritory && status != EntryStatus.none;
 }
 
-/// How the user treats a disputed territory.
-enum DisputedAlignment { partOfParent, independent }
+/// How the user treats a disputed territory: part of its parent, part of
+/// the other claimant ([TerritorySpec.altParentCode]) or a state of its own.
+enum DisputedAlignment { partOfParent, independent, partOfAlt }
 
 /// Static description of a territory (dependent or autonomous).
 class TerritorySpec {
@@ -65,10 +71,36 @@ class TerritorySpec {
     this.status = EntryStatus.none,
     this.alignable = false,
     this.paintsWithParent = false,
+    this.altParentCode,
+    this.hidden = false,
+    this.defaultAlignment = DisputedAlignment.independent,
   });
 
   final String code;
   final EntryStatus status;
+
+  /// A second country claiming this territory (Russia for Crimea). When set,
+  /// the user chooses between the two parents instead of "independent".
+  final String? altParentCode;
+
+  /// See [ListEntry.hidden].
+  final bool hidden;
+
+  /// Alignment used until the user chooses one.
+  final DisputedAlignment defaultAlignment;
+
+  /// The alignments offered to the user, in display order.
+  List<DisputedAlignment> get options => altParentCode == null
+      ? const [DisputedAlignment.independent, DisputedAlignment.partOfParent]
+      : const [DisputedAlignment.partOfParent, DisputedAlignment.partOfAlt];
+
+  /// The country this territory belongs to under [alignment], or null when
+  /// it is independent.
+  String? parentFor(DisputedAlignment alignment) => switch (alignment) {
+    DisputedAlignment.independent => null,
+    DisputedAlignment.partOfParent => parentCode,
+    DisputedAlignment.partOfAlt => altParentCode,
+  };
 
   /// Whether the user can choose to treat this territory as an independent
   /// state instead of a part of its parent (see [DisputedAlignment]).
@@ -106,6 +138,7 @@ List<ListEntry> buildListEntries(
   required List<TerritorySpec> territories,
   required List<ExtraCountrySpec> extras,
   Set<String> independentCodes = const {},
+  Set<String> altParentCodes = const {},
 }) {
   final top = <ListEntry>[];
   final children = <ListEntry>[];
@@ -114,6 +147,11 @@ List<ListEntry> buildListEntries(
   for (final c in countries) {
     // A territory that has map polygons is listed under its parent.
     final spec = specByCode[c.isoCode];
+    final parent = spec == null
+        ? null
+        : altParentCodes.contains(spec.code)
+        ? spec.altParentCode!
+        : spec.parentCode;
     if (spec != null &&
         spec.alignable &&
         independentCodes.contains(spec.code)) {
@@ -135,8 +173,9 @@ List<ListEntry> buildListEntries(
           status: spec.status,
           continent: c.continent ?? spec.continent,
           extraContinents: c.extraContinents,
-          parentCode: spec.parentCode,
+          parentCode: parent,
           paintsWithParent: spec.paintsWithParent,
+          hidden: spec.hidden,
         ),
       );
     } else {
@@ -177,15 +216,19 @@ List<ListEntry> buildListEntries(
       );
       continue;
     }
-    if (!topCodes.contains(t.parentCode)) continue;
+    final parent = altParentCodes.contains(t.code)
+        ? t.altParentCode!
+        : t.parentCode;
+    if (!topCodes.contains(parent)) continue;
     children.add(
       ListEntry(
         code: t.code,
         name: t.name,
         status: t.status,
         continent: t.continent,
-        parentCode: t.parentCode,
+        parentCode: parent,
         paintsWithParent: t.paintsWithParent,
+        hidden: t.hidden,
       ),
     );
   }

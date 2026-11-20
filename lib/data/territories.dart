@@ -119,6 +119,28 @@ const List<TerritorySpec> territorySpecs = [
     status: EntryStatus.disputed,
     alignable: true,
   ),
+  // Morocco: Western Sahara has its own polygon; independent by default.
+  TerritorySpec(
+    'EH',
+    'Western Sahara',
+    'MA',
+    _af,
+    status: EntryStatus.disputed,
+    alignable: true,
+  ),
+  // Crimea: claimed by Ukraine and Russia, so the choice is between the two
+  // (Ukraine by default, as recognised internationally).
+  TerritorySpec(
+    'XCR',
+    'Crimea',
+    'UA',
+    _eu,
+    status: EntryStatus.disputed,
+    alignable: true,
+    altParentCode: 'RU',
+    hidden: true,
+    defaultAlignment: DisputedAlignment.partOfParent,
+  ),
   // Finland.
   TerritorySpec('AX', 'Åland Islands', 'FI', _eu),
 ];

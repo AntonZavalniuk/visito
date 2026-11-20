@@ -239,38 +239,53 @@ Future<void> setTranscontinentalChoice(
 /// Settings key holding the alignment choice for disputed territory [code].
 String disputedSettingKey(String code) => 'disputed.$code';
 
-/// Alignment used until the user picks one: alignable disputed territories
-/// are independent states.
-const DisputedAlignment kDefaultDisputedAlignment =
-    DisputedAlignment.independent;
+String _alignmentName(DisputedAlignment a) => switch (a) {
+  DisputedAlignment.independent => 'independent',
+  DisputedAlignment.partOfParent => 'partOfParent',
+  DisputedAlignment.partOfAlt => 'partOfAlt',
+};
+
+DisputedAlignment _parseAlignment(String? value, TerritorySpec spec) {
+  for (final a in spec.options) {
+    if (_alignmentName(a) == value) return a;
+  }
+  return spec.defaultAlignment;
+}
 
 /// The user's alignment choice per alignable disputed territory; a missing
-/// entry means [kDefaultDisputedAlignment].
+/// entry means [TerritorySpec.defaultAlignment].
 final disputedAlignmentProvider =
     StreamProvider<Map<String, DisputedAlignment>>((ref) {
       return ref.watch(settingsRepositoryProvider).watchAll().map((all) {
         return {
           for (final t in territorySpecs)
             if (t.alignable)
-              t.code: switch (all[disputedSettingKey(t.code)]) {
-                'independent' => DisputedAlignment.independent,
-                'partOfParent' => DisputedAlignment.partOfParent,
-                _ => kDefaultDisputedAlignment,
-              },
+              t.code: _parseAlignment(all[disputedSettingKey(t.code)], t),
         };
       });
     });
+
+Map<String, DisputedAlignment> _defaultAlignments() => {
+  for (final t in territorySpecs)
+    if (t.alignable) t.code: t.defaultAlignment,
+};
+
+/// Codes of disputed territories assigned to their second claimant.
+final altParentCodesProvider = Provider<Set<String>>((ref) {
+  final choices =
+      ref.watch(disputedAlignmentProvider).value ?? _defaultAlignments();
+  return {
+    for (final e in choices.entries)
+      if (e.value == DisputedAlignment.partOfAlt) e.key,
+  };
+});
 
 /// Codes of disputed territories the user treats as independent states.
 /// Falls back to the defaults while settings are loading, so the list does
 /// not flash the wrong layout.
 final independentCodesProvider = Provider<Set<String>>((ref) {
   final choices =
-      ref.watch(disputedAlignmentProvider).value ??
-      {
-        for (final t in territorySpecs)
-          if (t.alignable) t.code: kDefaultDisputedAlignment,
-      };
+      ref.watch(disputedAlignmentProvider).value ?? _defaultAlignments();
   return {
     for (final e in choices.entries)
       if (e.value == DisputedAlignment.independent) e.key,
@@ -286,6 +301,7 @@ final listEntriesProvider = Provider<List<ListEntry>>((ref) {
     territories: territorySpecs,
     extras: extraCountrySpecs,
     independentCodes: ref.watch(independentCodesProvider),
+    altParentCodes: ref.watch(altParentCodesProvider),
   );
 });
 
@@ -346,14 +362,19 @@ Future<void> setDisputedAlignment(
   final repo = ref.read(countryRepositoryProvider);
   final key = disputedSettingKey(code);
   final spec = territorySpecs.firstWhere((t) => t.code == code);
-  final parent = spec.parentCode;
+  final parent = spec.parentFor(alignment) ?? spec.parentCode;
 
-  final current = await settings.getValue(key) == 'partOfParent'
-      ? DisputedAlignment.partOfParent
-      : DisputedAlignment.independent;
+  final current = _parseAlignment(await settings.getValue(key), spec);
   if (current == alignment) return;
 
-  if (alignment == DisputedAlignment.partOfParent) {
+  if (current != DisputedAlignment.independent &&
+      alignment != DisputedAlignment.independent) {
+    // Between two claimants: the state is derived from whichever parent.
+    await settings.setValue(key, _alignmentName(alignment));
+    return;
+  }
+
+  if (alignment != DisputedAlignment.independent) {
     final ownAt = await repo.visitedAt(code);
     DateTime? parentAutoAt;
     if (ownAt != null) {
@@ -371,7 +392,7 @@ Future<void> setDisputedAlignment(
         'parentAutoAt': parentAutoAt?.toIso8601String(),
       }),
     );
-    await settings.setValue(key, 'partOfParent');
+    await settings.setValue(key, _alignmentName(alignment));
   } else {
     final raw = await settings.getValue(_savedMarksKey(code));
     if (raw != null) {
@@ -383,8 +404,8 @@ Future<void> setDisputedAlignment(
       if (ownAt != null) await repo.markVisitedAt(code, ownAt);
       // Unmark the parent only if we marked it and it is still that row.
       if (parentAutoAt != null &&
-          await repo.visitedAt(parent) == parentAutoAt) {
-        await repo.setVisited(parent, false);
+          await repo.visitedAt(spec.parentCode) == parentAutoAt) {
+        await repo.setVisited(spec.parentCode, false);
       }
       await settings.delete(_savedMarksKey(code));
     }

@@ -8,6 +8,7 @@ import 'package:visito/data/database.dart';
 import 'package:visito/data/territories.dart';
 import 'package:visito/features/countries/countries_list_screen.dart';
 import 'package:visito/models/country.dart';
+import 'package:visito/models/list_entry.dart';
 import 'package:visito/providers/database_provider.dart';
 
 class _FakeLoader extends CountryGeoJsonLoader {
@@ -52,7 +53,14 @@ class _FakeLoader extends CountryGeoJsonLoader {
 /// List-only top-level entries: the extra countries plus the alignable
 /// disputed territories (e.g. Somaliland), independent by default.
 final int _extraCount =
-    extraCountrySpecs.length + territorySpecs.where((t) => t.alignable).length;
+    extraCountrySpecs.length +
+    territorySpecs
+        .where(
+          (t) =>
+              t.alignable &&
+              t.defaultAlignment == DisputedAlignment.independent,
+        )
+        .length;
 
 void _tallView(WidgetTester tester) {
   tester.view.physicalSize = const Size(800, 6000);
