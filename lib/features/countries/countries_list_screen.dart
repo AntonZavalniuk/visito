@@ -210,7 +210,11 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
   Widget build(BuildContext context) {
     final countriesAsync = ref.watch(worldCountriesProvider);
     final visitedCodesAsync = ref.watch(visitedCountryCodesProvider);
-    final allEntries = ref.watch(listEntriesProvider);
+    // Settings-only territories (Crimea) are not rows of the list.
+    final allEntries = ref
+        .watch(listEntriesProvider)
+        .where((e) => !e.hidden)
+        .toList();
     final painted = ref.watch(paintedCodesProvider);
 
     // Counts countries only (incl. disputed, observer & non-member);

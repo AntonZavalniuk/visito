@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:visito/data/country_geo_loader.dart';
 import 'package:visito/data/database.dart';
 import 'package:visito/data/settings_repository.dart';
+import 'package:visito/features/countries/countries_list_screen.dart';
 import 'package:visito/features/profile/profile_screen.dart';
 import 'package:visito/models/country.dart';
 import 'package:visito/models/list_entry.dart';
@@ -35,6 +36,8 @@ class _Loader extends CountryGeoJsonLoader {
 }
 
 void main() {
+  crimeaHiddenTest();
+  crimeaTests();
   transcontinentalTests();
   northernCyprusTests();
   test('SettingsRepository stores and replaces values', () async {
@@ -65,7 +68,7 @@ void main() {
     expect(find.text('Somaliland'), findsOneWidget);
     // The row shows the current choice; options live in a sheet.
     expect(find.byKey(const ValueKey('XNC_header')), findsOneWidget);
-    expect(find.text('Independent state'), findsNWidgets(4));
+    expect(find.text('Independent state'), findsNWidgets(5));
     expect(find.byKey(const ValueKey('XSL_part')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('XSL_header')));
     await tester.pumpAndSettle();
@@ -247,6 +250,9 @@ void transcontinentalTests() {
   testWidgets('transcontinental choice changes the continents of a country', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final db = AppDatabase(NativeDatabase.memory());
     await tester.pumpWidget(
       ProviderScope(
@@ -341,6 +347,102 @@ void northernCyprusTests() {
     expect(continents('CY'), {Continent.europe});
     expect(continents('XNC'), {Continent.europe});
 
+    await db.close();
+  });
+}
+
+class _CrimeaLoader extends CountryGeoJsonLoader {
+  const _CrimeaLoader();
+
+  @override
+  Future<List<Country>> loadFromBundle([dynamic bundle]) async => [
+    for (final (iso, name) in [
+      ('UA', 'Ukraine'),
+      ('RU', 'Russia'),
+      ('XCR', 'Crimea'),
+    ])
+      Country(
+        isoCode: iso,
+        name: name,
+        continent: Continent.europe,
+        unMember: iso != 'XCR',
+        disputed: iso == 'XCR',
+        polygons: [
+          [const LatLng(0, 0), const LatLng(0, 1), const LatLng(1, 1)],
+        ],
+      ),
+  ];
+}
+
+void crimeaTests() {
+  testWidgets('Crimea is part of Ukraine or Russia, never independent', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final db = AppDatabase(NativeDatabase.memory());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          countryGeoJsonLoaderProvider.overrideWithValue(const _CrimeaLoader()),
+        ],
+        child: const MaterialApp(home: ProfileScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ProfileScreen)),
+    );
+    String? parentOfCrimea() => container
+        .read(listEntriesProvider)
+        .firstWhere((e) => e.code == 'XCR')
+        .parentCode;
+
+    // Default: Ukraine.
+    expect(parentOfCrimea(), 'UA');
+    expect(find.text('Part of Ukraine'), findsOneWidget);
+    expect(paintedCodesOf(container.read(listEntriesProvider), {'UA'}), {
+      'UA',
+      'XCR',
+    });
+
+    await tester.tap(find.byKey(const ValueKey('XCR_header')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('XCR_independent')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('XCR_partAlt')));
+    await tester.pumpAndSettle();
+    expect(parentOfCrimea(), 'RU');
+    expect(find.text('Part of Russia'), findsOneWidget);
+    expect(paintedCodesOf(container.read(listEntriesProvider), {'RU'}), {
+      'RU',
+      'XCR',
+    });
+    expect(paintedCodesOf(container.read(listEntriesProvider), {'UA'}), {'UA'});
+
+    await db.close();
+  });
+}
+
+void crimeaHiddenTest() {
+  testWidgets('Crimea is not a row of the countries list', (tester) async {
+    tester.view.physicalSize = const Size(800, 6000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final db = AppDatabase(NativeDatabase.memory());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          countryGeoJsonLoaderProvider.overrideWithValue(const _CrimeaLoader()),
+        ],
+        child: const MaterialApp(home: CountriesListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Ukraine'), findsOneWidget);
+    expect(find.text('Crimea'), findsNothing);
     await db.close();
   });
 }

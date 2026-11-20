@@ -26,11 +26,11 @@ class ProfileScreen extends ConsumerWidget {
     final transcontinental = ref.watch(transcontinentalChoicesProvider);
     final alignable = territorySpecs.where((t) => t.alignable).toList();
 
-    String parentName(TerritorySpec t) {
+    String countryName(String code) {
       for (final c in countries) {
-        if (c.isoCode == t.parentCode) return c.name;
+        if (c.isoCode == code) return c.name;
       }
-      return t.parentCode;
+      return code;
     }
 
     return Scaffold(
@@ -90,10 +90,10 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       _DisputedRow(
                         spec: alignable[i],
-                        parentName: parentName(alignable[i]),
+                        countryName: countryName,
                         alignment:
                             choices[alignable[i].code] ??
-                            kDefaultDisputedAlignment,
+                            alignable[i].defaultAlignment,
                         onChanged: (a) =>
                             setDisputedAlignment(ref, alignable[i].code, a),
                       ),
@@ -157,19 +157,22 @@ class ProfileScreen extends ConsumerWidget {
 class _DisputedRow extends StatelessWidget {
   const _DisputedRow({
     required this.spec,
-    required this.parentName,
+    required this.countryName,
     required this.alignment,
     required this.onChanged,
   });
 
   final TerritorySpec spec;
-  final String parentName;
+  final String Function(String code) countryName;
   final DisputedAlignment alignment;
   final ValueChanged<DisputedAlignment> onChanged;
 
-  String _label(DisputedAlignment a) => a == DisputedAlignment.independent
-      ? 'Independent state'
-      : 'Part of $parentName';
+  String _label(DisputedAlignment a) => switch (a) {
+    DisputedAlignment.independent => 'Independent state',
+    DisputedAlignment.partOfParent => 'Part of ${countryName(spec.parentCode)}',
+    DisputedAlignment.partOfAlt =>
+      'Part of ${countryName(spec.altParentCode!)}',
+  };
 
   Future<void> _openSheet(BuildContext context) {
     return showModalBottomSheet<void>(
@@ -205,10 +208,14 @@ class _DisputedRow extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            for (final option in DisputedAlignment.values) ...[
+            for (final option in spec.options) ...[
               _option(
                 key: ValueKey(
-                  '${spec.code}_${option == DisputedAlignment.independent ? 'independent' : 'part'}',
+                  '${spec.code}_${switch (option) {
+                    DisputedAlignment.independent => 'independent',
+                    DisputedAlignment.partOfParent => 'part',
+                    DisputedAlignment.partOfAlt => 'partAlt',
+                  }}',
                 ),
                 label: _label(option),
                 selected: alignment == option,
