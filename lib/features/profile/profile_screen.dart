@@ -57,7 +57,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               const Text(
                 'COUNTRY COUNT',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -67,10 +67,7 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 6),
               const Text(
                 'What the counters on the list, stats and globe include.',
-                style: const TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
               ),
               const SizedBox(height: 12),
               GlassContainer(
@@ -535,7 +532,7 @@ class _CountBasisRow extends StatelessWidget {
           children: [
             const Text(
               'Total',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
@@ -611,9 +608,9 @@ class _CountBasisRow extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               const Expanded(
-                child: const Text(
+                child: Text(
                   'Total',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
