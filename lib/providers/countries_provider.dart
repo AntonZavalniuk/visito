@@ -132,7 +132,8 @@ class ContinentStats {
   int get hashCode => Object.hash(continent, visited, total);
 }
 
-/// Computes per-continent stats from official (UN member) countries only,
+/// Computes per-continent stats from official (UN member and observer)
+/// countries only,
 /// in [Continent] display order. Continents without official countries
 /// (e.g. Antarctica) are omitted. Used by the achievements, which are always
 /// about UN countries whatever the count basis.
@@ -143,7 +144,10 @@ List<ContinentStats> computeContinentStats(
   final result = <ContinentStats>[];
   for (final continent in Continent.values) {
     final official = countries
-        .where((c) => c.unMember && c.continents.contains(continent))
+        .where(
+          (c) =>
+              (c.unMember || c.unObserver) && c.continents.contains(continent),
+        )
         .toList();
     if (official.isEmpty) continue;
     result.add(

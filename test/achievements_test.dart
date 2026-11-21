@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:visito/models/achievement.dart';
 import 'package:visito/models/country.dart';
+import 'package:visito/models/list_entry.dart';
 
 Country _c(
   String iso,
@@ -56,19 +57,48 @@ void main() {
     expect(s['first_stamp']!.current, 0);
   });
 
-  test('half the world uses half of the official total (rounded up)', () {
-    var s = _byId(evaluateAchievements(countries, {'FR'}));
-    expect(s['half_world']!.target, 2);
-    expect(s['half_world']!.unlocked, isFalse);
-    s = _byId(evaluateAchievements(countries, {'FR', 'JP'}));
-    expect(s['half_world']!.unlocked, isTrue);
+  test('there is no half-the-world badge any more', () {
+    final s = _byId(evaluateAchievements(countries, {}));
+    expect(s.containsKey('half_world'), isFalse);
   });
 
-  test('whole world needs every official country', () {
+  test('every UN member needs every official country', () {
     var s = _byId(evaluateAchievements(countries, {'FR', 'DE', 'JP'}));
     expect(s['whole_world']!.unlocked, isFalse);
     s = _byId(evaluateAchievements(countries, {'FR', 'DE', 'JP', 'AU'}));
     expect(s['whole_world']!.unlocked, isTrue);
+  });
+
+  test('the whole world needs every country and territory', () {
+    final entries = [
+      const ListEntry(code: 'FR', name: 'France', status: EntryStatus.un),
+      const ListEntry(code: 'TW', name: 'Taiwan', status: EntryStatus.none),
+      const ListEntry(
+        code: 'GI',
+        name: 'Gibraltar',
+        status: EntryStatus.none,
+        parentCode: 'GB',
+      ),
+    ];
+    var s = _byId(
+      evaluateAchievements(countries, {'FR', 'TW'}, entries: entries),
+    );
+    expect(s['all_territories']!.target, 3);
+    expect(s['all_territories']!.current, 2);
+    expect(s['all_territories']!.unlocked, isFalse);
+    s = _byId(
+      evaluateAchievements(countries, {'FR', 'TW', 'GI'}, entries: entries),
+    );
+    expect(s['all_territories']!.unlocked, isTrue);
+  });
+
+  test('Nordic Way needs the five Nordic countries', () {
+    var s = _byId(evaluateAchievements(countries, {'DK', 'SE', 'FO'}));
+    expect(s['nordic_way']!.target, 5);
+    expect(s['nordic_way']!.current, 2); // the Faroe Islands do not count
+    expect(s['nordic_way']!.unlocked, isFalse);
+    s = _byId(evaluateAchievements(countries, {'DK', 'FI', 'IS', 'NO', 'SE'}));
+    expect(s['nordic_way']!.unlocked, isTrue);
   });
 
   test(

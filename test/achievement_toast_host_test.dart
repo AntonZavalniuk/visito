@@ -73,7 +73,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    // First queued toast: an achievement (First Stamp / Half the World...).
+    // First queued toast: an achievement (First Stamp...).
     expect(find.text('Achievement unlocked'), findsOneWidget);
 
     // Drain the queue: every toast stays 3 s; eventually the rank-up shows.

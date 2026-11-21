@@ -79,7 +79,10 @@ void main() {
     expect(
       europe.firstWhere((s) => s.continent == Continent.europe).total,
       countries
-          .where((c) => c.unMember && c.continent == Continent.europe)
+          .where(
+            (c) =>
+                (c.unMember || c.unObserver) && c.continent == Continent.europe,
+          )
           .length,
     );
   });

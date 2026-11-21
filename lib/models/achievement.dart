@@ -1,29 +1,53 @@
 import 'package:flutter/material.dart';
 
 import '../providers/countries_provider.dart';
+import 'count_basis.dart';
 import 'country.dart';
+import 'list_entry.dart';
 
 /// Inputs an achievement is evaluated against.
 class AchievementContext {
-  AchievementContext({required this.countries, required this.visitedCodes})
-    : continentStats = computeContinentStats(countries, visitedCodes),
-      visitedContinents = visitedContinentsOf(countries, visitedCodes);
+  AchievementContext({
+    required this.countries,
+    required this.visitedCodes,
+    this.entries = const [],
+    Set<String>? paintedCodes,
+  }) : paintedCodes = paintedCodes ?? visitedCodes,
+       continentStats = computeContinentStats(countries, visitedCodes),
+       visitedContinents = visitedContinentsOf(countries, visitedCodes);
 
   final List<Country> countries;
   final Set<String> visitedCodes;
 
-  /// Official (UN member) stats per continent.
+  /// The countries list, with territories, and the codes painted on the map
+  /// (a territory follows its parent); used by the all-territories badge.
+  final List<ListEntry> entries;
+  final Set<String> paintedCodes;
+
+  /// Official (UN member and observer) stats per continent.
   final List<ContinentStats> continentStats;
 
   /// Continents with any visited country, including Antarctica.
   final Set<Continent> visitedContinents;
 
-  Iterable<Country> get _official => countries.where((c) => c.unMember);
+  Iterable<Country> get _official =>
+      countries.where((c) => c.unMember || c.unObserver);
 
   int get officialTotal => _official.length;
 
   int get officialVisited =>
       _official.where((c) => visitedCodes.contains(c.isoCode)).length;
+
+  /// Every country and territory of the list (see [CountBasis.all]).
+  int get allTotal => entries.where(CountBasis.all.counts).length;
+
+  int get allVisited => entries
+      .where((e) => CountBasis.all.counts(e) && paintedCodes.contains(e.code))
+      .length;
+
+  /// How many of the [kNordicCodes] are visited.
+  int get nordicVisited =>
+      kNordicCodes.where((c) => paintedCodes.contains(c)).length;
 
   /// Visited countries whose center lies north of the equator.
   bool get visitedNorth => _visitedCenters.any((lat) => lat > 0);
@@ -41,6 +65,9 @@ class AchievementContext {
         c.continent == Continent.antarctica && visitedCodes.contains(c.isoCode),
   );
 }
+
+/// The five Nordic countries.
+const List<String> kNordicCodes = ['DK', 'FI', 'IS', 'NO', 'SE'];
 
 /// A badge that can be unlocked, with a measurable `current / target`.
 class Achievement {
@@ -107,14 +134,14 @@ List<Achievement> buildAchievements(AchievementContext ctx) {
     ),
     _countAchievement(
       'getting_started',
-      'Getting Started',
+      'Frequent Flyer',
       'Visit 5 UN countries',
       Icons.directions_walk_rounded,
       5,
     ),
     _countAchievement(
       'double_digits',
-      'Double Digits',
+      'Jet Setter',
       'Visit 10 UN countries',
       Icons.looks_one_rounded,
       10,
@@ -141,20 +168,20 @@ List<Achievement> buildAchievements(AchievementContext ctx) {
       100,
     ),
     Achievement(
-      id: 'half_world',
-      title: 'Half the World',
-      description: 'Visit half of all UN countries',
-      icon: Icons.public_rounded,
-      target: (c) => (c.officialTotal / 2).ceil(),
-      current: (c) => c.officialVisited,
-    ),
-    Achievement(
       id: 'whole_world',
-      title: 'Whole World',
-      description: 'Visit every UN country',
+      title: 'Every UN Member',
+      description: 'Visit every UN member and observer',
       icon: Icons.workspace_premium_rounded,
       target: (c) => c.officialTotal,
       current: (c) => c.officialVisited,
+    ),
+    Achievement(
+      id: 'all_territories',
+      title: 'The Whole World',
+      description: 'Visit every country and territory',
+      icon: Icons.public_rounded,
+      target: (c) => c.allTotal,
+      current: (c) => c.allVisited,
     ),
     Achievement(
       id: 'six_continents',
@@ -172,6 +199,14 @@ List<Achievement> buildAchievements(AchievementContext ctx) {
       icon: Icons.language_rounded,
       target: (_) => 7,
       current: (c) => c.visitedContinents.length,
+    ),
+    Achievement(
+      id: 'nordic_way',
+      title: 'Nordic Way',
+      description: 'Visit Denmark, Finland, Iceland, Norway and Sweden',
+      icon: Icons.ac_unit_rounded,
+      target: (_) => kNordicCodes.length,
+      current: (c) => c.nordicVisited,
     ),
     Achievement(
       id: 'both_hemispheres',
@@ -208,11 +243,15 @@ List<Achievement> buildAchievements(AchievementContext ctx) {
 /// Evaluates all achievements for the given state.
 List<AchievementStatus> evaluateAchievements(
   List<Country> countries,
-  Set<String> visitedCodes,
-) {
+  Set<String> visitedCodes, {
+  List<ListEntry> entries = const [],
+  Set<String>? paintedCodes,
+}) {
   final ctx = AchievementContext(
     countries: countries,
     visitedCodes: visitedCodes,
+    entries: entries,
+    paintedCodes: paintedCodes,
   );
   return [
     for (final a in buildAchievements(ctx))

@@ -22,5 +22,12 @@ final achievementsProvider = Provider<AsyncValue<List<AchievementStatus>>>((
   final v = visited.value;
   if (c == null || v == null) return const AsyncValue.loading();
 
-  return AsyncValue.data(evaluateAchievements(c, v));
+  return AsyncValue.data(
+    evaluateAchievements(
+      c,
+      v,
+      entries: ref.watch(listEntriesProvider),
+      paintedCodes: ref.watch(paintedCodesProvider),
+    ),
+  );
 });
