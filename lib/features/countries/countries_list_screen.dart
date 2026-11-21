@@ -297,6 +297,9 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                     child: Center(
                       child: TextField(
                         controller: _searchController,
+                        // Only the sheet form focuses the field on open; as a
+                        // tab it would pop the keyboard on every visit.
+                        autofocus: widget.onClose != null,
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 15,
