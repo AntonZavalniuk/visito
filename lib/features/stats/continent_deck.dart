@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' show LatLng;
 
 import '../../core/theme/app_colors.dart';
+import '../../models/count_basis.dart';
 import '../../models/country.dart';
 import '../../providers/countries_provider.dart';
 import '../globe/globe_painter.dart';
@@ -35,12 +36,16 @@ class ContinentDeck extends StatefulWidget {
     required this.continents,
     required this.countries,
     required this.visitedCodes,
+    this.basis = CountBasis.un,
   });
 
   final WorldStats overall;
   final List<ContinentStats> continents;
   final List<Country> countries;
   final Set<String> visitedCodes;
+
+  /// What the totals count; only changes the captions here.
+  final CountBasis basis;
 
   @override
   State<ContinentDeck> createState() => _ContinentDeckState();
@@ -148,7 +153,11 @@ class _ContinentDeckState extends State<ContinentDeck>
       .where((c) => c.continent == Continent.antarctica)
       .toList();
 
-  bool get _hasAntarctica => _antarcticaEntries.isNotEmpty;
+  /// Antarctica gets its own fallback card only when the count basis does not
+  /// already give it a regular continent card.
+  bool get _hasAntarctica =>
+      _antarcticaEntries.isNotEmpty &&
+      !widget.continents.any((c) => c.continent == Continent.antarctica);
 
   @override
   Widget build(BuildContext context) {
@@ -284,7 +293,9 @@ class _ContinentDeckState extends State<ContinentDeck>
           title: cs.continent.label,
           value: '${cs.visited}',
           total: '${cs.total}',
-          subtitle: 'Countries recognized by the UN',
+          subtitle: widget.basis == CountBasis.un
+              ? 'Countries recognized by the UN'
+              : 'Counted: ${widget.basis.noun}',
           backdrop: RepaintBoundary(
             child: CustomPaint(
               painter: _SilhouettePainter(
@@ -451,12 +462,19 @@ class _ContinentDeckState extends State<ContinentDeck>
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _statColumn('$percent', 'World', suffix: '%'),
-                      _statColumn('${stats.visitedCount}', 'Countries'),
+                      _statColumn(
+                        '${stats.visitedCount}',
+                        widget.basis == CountBasis.all
+                            ? 'Entities'
+                            : 'Countries',
+                      ),
                     ],
                   ),
                 ),
                 Center(
-                  child: _subtitle('Out of ${stats.totalCount} UN Countries'),
+                  child: _subtitle(
+                    'Out of ${stats.totalCount} ${widget.basis.noun}',
+                  ),
                 ),
               ],
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/count_basis.dart';
 import '../../models/country.dart';
 import '../../models/list_entry.dart';
 import '../theme/app_colors.dart';
@@ -88,19 +89,28 @@ class StatusBadge extends StatelessWidget {
   }
 }
 
-/// "UN" badge with a tooltip, placed next to counters that only include UN
-/// member states.
+/// Small badge with a tooltip, placed next to counters; it names what the
+/// counter includes under the chosen [CountBasis].
 class UnScopeBadge extends StatelessWidget {
-  const UnScopeBadge({super.key});
+  const UnScopeBadge({super.key, this.basis = CountBasis.un});
+
+  final CountBasis basis;
 
   static const String message = 'Counts UN member countries only';
 
   @override
   Widget build(BuildContext context) {
-    return const Tooltip(
-      message: message,
+    return Tooltip(
+      message: basis == CountBasis.un ? message : 'Counts ${basis.noun}',
       triggerMode: TooltipTriggerMode.tap,
-      child: StatusBadge(label: 'UN', color: AppColors.accentCyan),
+      child: StatusBadge(
+        label: switch (basis) {
+          CountBasis.un => 'UN',
+          CountBasis.unDisputed => 'UN+',
+          CountBasis.all => 'ALL',
+        },
+        color: AppColors.accentCyan,
+      ),
     );
   }
 }

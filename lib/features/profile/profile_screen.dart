@@ -8,6 +8,7 @@ import '../../core/widgets/flag_badge.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../data/territories.dart';
 import '../../data/transcontinental.dart';
+import '../../models/count_basis.dart';
 import '../../models/country.dart';
 import '../../models/list_entry.dart';
 import '../../providers/countries_provider.dart';
@@ -24,6 +25,8 @@ class ProfileScreen extends ConsumerWidget {
         const <String, DisputedAlignment>{};
     final countries = ref.watch(worldCountriesProvider).value ?? <Country>[];
     final transcontinental = ref.watch(transcontinentalChoicesProvider);
+    final countBasis = ref.watch(countBasisProvider);
+    final entries = ref.watch(listEntriesProvider);
     final alignable = territorySpecs.where((t) => t.alignable).toList();
 
     String countryName(String code) {
@@ -52,9 +55,37 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
+              const Text(
+                'COUNTRY COUNT',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'What the counters on the list, stats and globe include.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              GlassContainer(
+                padding: EdgeInsets.zero,
+                borderRadius: BorderRadius.circular(18),
+                child: _CountBasisRow(
+                  basis: countBasis,
+                  totals: {
+                    for (final b in CountBasis.values)
+                      b: entries.where(b.counts).length,
+                  },
+                  onChanged: (b) => setCountBasis(ref, b),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Row(
                 children: [
-                  const Text(
+                  Text(
                     'DISPUTED TERRITORIES',
                     style: TextStyle(
                       color: AppColors.textSecondary,
@@ -63,11 +94,8 @@ class ProfileScreen extends ConsumerWidget {
                       letterSpacing: 1.2,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const StatusBadge(
-                    label: 'DISP',
-                    color: AppColors.textSecondary,
-                  ),
+                  SizedBox(width: 8),
+                  StatusBadge(label: 'DISP', color: AppColors.textSecondary),
                 ],
               ),
               const SizedBox(height: 6),
@@ -453,6 +481,145 @@ class _TranscontinentalRow extends StatelessWidget {
               Text(
                 _label(choice),
                 key: ValueKey('${spec.code}_trans_value'),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.unfold_more_rounded,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The "Total" row of the country count: shows the chosen basis; tapping
+/// opens a sheet with the options and how many things each one counts.
+class _CountBasisRow extends StatelessWidget {
+  const _CountBasisRow({
+    required this.basis,
+    required this.totals,
+    required this.onChanged,
+  });
+
+  final CountBasis basis;
+  final Map<CountBasis, int> totals;
+  final ValueChanged<CountBasis> onChanged;
+
+  String _label(CountBasis b) => '${b.label} (${totals[b]})';
+
+  Future<void> _openSheet(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: AppColors.backgroundDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Total',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 16),
+            for (final option in CountBasis.values) ...[
+              GlassContainer(
+                key: ValueKey('count_${option.name}'),
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                borderRadius: BorderRadius.circular(14),
+                color: option == basis
+                    ? AppColors.primaryDark.withValues(alpha: 0.22)
+                    : AppColors.glassBackground(0.05),
+                borderColor: option == basis
+                    ? AppColors.primaryLight.withValues(alpha: 0.45)
+                    : AppColors.glassBorder(0.10),
+                onTap: () {
+                  onChanged(option);
+                  Navigator.of(ctx).pop();
+                },
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _label(option),
+                          style: TextStyle(
+                            color: option == basis
+                                ? AppColors.primaryLight
+                                : AppColors.textSecondary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (option == basis)
+                        const Icon(
+                          Icons.check_rounded,
+                          color: AppColors.primaryLight,
+                          size: 22,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: const ValueKey('count_header'),
+      borderRadius: BorderRadius.circular(18),
+      onTap: () => _openSheet(context),
+      child: SizedBox(
+        height: 56,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.functions_rounded,
+                size: 22,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Total',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                _label(basis),
+                key: const ValueKey('count_value'),
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 15,

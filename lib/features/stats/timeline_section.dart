@@ -42,7 +42,6 @@ class TimelineSection extends StatelessWidget {
                       key: const ValueKey('timeline_visited'),
                       icon: Icons.calendar_today_rounded,
                       value: '${timeline.visitedCount}',
-                      label: 'Visited Countries',
                       hint: 'Incl. disputed & observer',
                     ),
                   ),
@@ -141,7 +140,7 @@ class TimelineSection extends StatelessWidget {
     required Key key,
     required IconData icon,
     required String value,
-    required String label,
+    String? label,
     String? hint,
     bool highlight = false,
   }) {
@@ -165,14 +164,15 @@ class TimelineSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.textMuted,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+        if (label != null)
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
         if (hint != null)
           Text(
             hint,

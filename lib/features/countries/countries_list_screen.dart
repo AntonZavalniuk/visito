@@ -108,22 +108,19 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
   /// Flattens [entries] into continent headers followed by their countries
   /// and nested territories. Continents without matches are omitted.
   ///
-  /// Header counters show visited / total countries (territories excluded)
-  /// for the whole continent in [allEntries]. Search does not change them.
+  /// Header counters show visited / total of the [counted] entries for the
+  /// whole continent. Search does not change them.
   List<Object> _buildGroupedItems(
     List<ListEntry> entries,
     List<ListEntry> allEntries,
-    Set<String> visitedCodes,
+    List<ListEntry> counted,
+    Set<String> paintedCodes,
   ) {
     ({int visited, int total}) countsFor(Continent? continent) {
-      final all = allEntries
-          .where(
-            (e) =>
-                !e.isTerritory &&
-                _continentsOf(e, allEntries).contains(continent),
-          )
+      final all = counted
+          .where((e) => _continentsOf(e, allEntries).contains(continent))
           .toList();
-      final visited = all.where((e) => visitedCodes.contains(e.code)).length;
+      final visited = all.where((e) => paintedCodes.contains(e.code)).length;
       return (visited: visited, total: all.length);
     }
 
@@ -209,7 +206,6 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
   @override
   Widget build(BuildContext context) {
     final countriesAsync = ref.watch(worldCountriesProvider);
-    final visitedCodesAsync = ref.watch(visitedCountryCodesProvider);
     // Settings-only territories (Crimea) are not rows of the list.
     final allEntries = ref
         .watch(listEntriesProvider)
@@ -217,13 +213,10 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
         .toList();
     final painted = ref.watch(paintedCodesProvider);
 
-    // Counts countries only (incl. disputed, observer & non-member);
-    // territories are marked separately and not counted here.
-    final topEntries = allEntries.where((e) => !e.isTerritory).toList();
+    // What is counted follows the "Country count" choice in Profile.
+    final counted = ref.watch(countedEntriesProvider);
     final visitedListCount = countriesAsync.hasValue
-        ? topEntries
-              .where((e) => (visitedCodesAsync.value ?? {}).contains(e.code))
-              .length
+        ? counted.where((e) => painted.contains(e.code)).length
         : null;
 
     return Scaffold(
@@ -265,7 +258,7 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                             ),
                             if (visitedListCount != null)
                               Text(
-                                'Visited: $visitedListCount of ${topEntries.length}',
+                                'Visited: $visitedListCount of ${counted.length}',
                                 key: const ValueKey('visited_summary'),
                                 style: const TextStyle(
                                   color: AppColors.textSecondary,
@@ -352,7 +345,6 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                   ),
                 ),
                 data: (_) {
-                  final visitedCodes = visitedCodesAsync.value ?? <String>{};
                   final filtered = _filterEntries(allEntries);
 
                   if (filtered.isEmpty) {
@@ -362,7 +354,8 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                   final items = _buildGroupedItems(
                     filtered,
                     allEntries,
-                    visitedCodes,
+                    counted,
+                    painted,
                   );
 
                   return ListView.builder(

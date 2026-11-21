@@ -31,24 +31,24 @@ const List<TravelRank> kTravelRanks = [
   ),
   TravelRank(
     title: 'Globetrotter ✈️',
-    minVisited: 6,
+    minVisited: 5,
     description:
         'Impressive wanderlust! You are collecting stamps and memories.',
   ),
   TravelRank(
     title: 'World Adventurer 🧭',
-    minVisited: 16,
+    minVisited: 20,
     description:
         'True adventurer! You have experienced diverse cultures and places.',
   ),
   TravelRank(
     title: 'Master Voyager 🗺️',
-    minVisited: 31,
+    minVisited: 50,
     description: 'Incredible voyager! A substantial portion of the world is familiar to you.',
   ),
   TravelRank(
     title: 'Legendary Citizen of Earth 👑',
-    minVisited: 61,
+    minVisited: 75,
     description: 'Extraordinary explorer! The whole planet is truly your home.',
   ),
 ];
