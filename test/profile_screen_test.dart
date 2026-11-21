@@ -36,6 +36,7 @@ class _Loader extends CountryGeoJsonLoader {
 }
 
 void main() {
+  georgiaSiblingTests();
   crimeaHiddenTest();
   crimeaTests();
   transcontinentalTests();
@@ -68,7 +69,7 @@ void main() {
     expect(find.text('Somaliland'), findsOneWidget);
     // The row shows the current choice; options live in a sheet.
     expect(find.byKey(const ValueKey('XNC_header')), findsOneWidget);
-    expect(find.text('Independent state'), findsNWidgets(5));
+    expect(find.text('Independent state'), findsNWidgets(7));
     expect(find.byKey(const ValueKey('XSL_part')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('XSL_header')));
     await tester.pumpAndSettle();
@@ -443,6 +444,89 @@ void crimeaHiddenTest() {
     await tester.pumpAndSettle();
     expect(find.text('Ukraine'), findsOneWidget);
     expect(find.text('Crimea'), findsNothing);
+    await db.close();
+  });
+}
+
+class _GeorgiaLoader extends CountryGeoJsonLoader {
+  const _GeorgiaLoader();
+
+  @override
+  Future<List<Country>> loadFromBundle([dynamic bundle]) async => [
+    for (final (iso, name) in [
+      ('GE', 'Georgia'),
+      ('XAB', 'Abkhazia'),
+      ('XSO', 'South Ossetia'),
+    ])
+      Country(
+        isoCode: iso,
+        name: name,
+        continent: Continent.asia,
+        unMember: iso == 'GE',
+        disputed: iso != 'GE',
+        polygons: [
+          [const LatLng(0, 0), const LatLng(0, 1), const LatLng(1, 1)],
+        ],
+      ),
+  ];
+}
+
+void georgiaSiblingTests() {
+  testWidgets('two territories of one parent do not lose each other\'s marks', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final db = AppDatabase(NativeDatabase.memory());
+    for (final code in ['XAB', 'XSO']) {
+      await db
+          .into(db.visitedCountries)
+          .insert(VisitedCountriesCompanion.insert(isoCode: code));
+    }
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          countryGeoJsonLoaderProvider.overrideWithValue(
+            const _GeorgiaLoader(),
+          ),
+        ],
+        child: const MaterialApp(home: ProfileScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ProfileScreen)),
+    );
+
+    Future<void> pick(String code, String option) async {
+      await tester.tap(find.byKey(ValueKey('${code}_header')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ValueKey('${code}_$option')));
+      await tester.pumpAndSettle();
+    }
+
+    Future<Set<String>> stored() async => {
+      for (final r in await db.select(db.visitedCountries).get()) r.isoCode,
+    };
+    Future<Set<String>> painted() async =>
+        paintedCodesOf(container.read(listEntriesProvider), await stored());
+
+    await pick('XAB', 'part');
+    await pick('XSO', 'part');
+    expect(await stored(), {'GE'});
+    expect(await painted(), {'GE', 'XAB', 'XSO'});
+
+    // Abkhazia goes back: Georgia must stay, South Ossetia still relies on it.
+    await pick('XAB', 'independent');
+    expect(await stored(), {'GE', 'XAB'});
+    expect(await painted(), {'GE', 'XAB', 'XSO'});
+
+    // Last one goes back: Georgia is unmarked again.
+    await pick('XSO', 'independent');
+    expect(await stored(), {'XAB', 'XSO'});
+
     await db.close();
   });
 }
