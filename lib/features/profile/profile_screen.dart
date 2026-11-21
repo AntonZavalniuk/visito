@@ -153,7 +153,7 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 /// One row of the disputed-territories list: flag, name, the current choice
-/// as a subtitle and a chevron. Tapping opens a sheet to change the choice.
+/// on the right with a select icon. Tapping opens a sheet to change the choice.
 class _DisputedRow extends StatelessWidget {
   const _DisputedRow({
     required this.spec,
@@ -239,7 +239,7 @@ class _DisputedRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       onTap: () => _openSheet(context),
       child: SizedBox(
-        height: 64,
+        height: 56,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(
@@ -247,36 +247,29 @@ class _DisputedRow extends StatelessWidget {
               FlagBadge(code: spec.code),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      spec.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _label(alignment),
-                      key: ValueKey('${spec.code}_summary'),
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  spec.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
+              Text(
+                _label(alignment),
+                key: ValueKey('${spec.code}_summary'),
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 4),
               const Icon(
-                Icons.chevron_right_rounded,
-                size: 24,
+                Icons.unfold_more_rounded,
+                size: 20,
                 color: AppColors.textSecondary,
               ),
             ],
