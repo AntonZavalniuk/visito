@@ -141,6 +141,23 @@ const List<TerritorySpec> territorySpecs = [
     hidden: true,
     defaultAlignment: DisputedAlignment.partOfParent,
   ),
+  // Georgia: two breakaway states under one parent.
+  TerritorySpec(
+    'XAB',
+    'Abkhazia',
+    'GE',
+    _as,
+    status: EntryStatus.disputed,
+    alignable: true,
+  ),
+  TerritorySpec(
+    'XSO',
+    'South Ossetia',
+    'GE',
+    _as,
+    status: EntryStatus.disputed,
+    alignable: true,
+  ),
   // Finland.
   TerritorySpec('AX', 'Åland Islands', 'FI', _eu),
 ];
@@ -150,6 +167,4 @@ const List<TerritorySpec> territorySpecs = [
 const List<ExtraCountrySpec> extraCountrySpecs = [
   ExtraCountrySpec('CK', 'Cook Islands', EntryStatus.nonMember, _oc),
   ExtraCountrySpec('NU', 'Niue', EntryStatus.nonMember, _oc),
-  ExtraCountrySpec('XAB', 'Abkhazia', EntryStatus.disputed, _as),
-  ExtraCountrySpec('XSO', 'South Ossetia', EntryStatus.disputed, _as),
 ];

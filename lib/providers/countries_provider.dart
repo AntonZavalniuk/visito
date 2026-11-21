@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/settings_repository.dart';
 import '../data/territories.dart';
 import '../data/transcontinental.dart';
 import '../models/country.dart';
@@ -344,6 +345,30 @@ Country resolveTapTarget(
 /// Settings key holding what to restore when [code] goes back to independent.
 String _savedMarksKey(String code) => '${disputedSettingKey(code)}.saved';
 
+/// Another alignable territory of [spec]'s parent that is currently part of
+/// the parent and had its own mark folded into it (so only the parent's mark
+/// keeps it visited), or null.
+Future<({String code, DateTime ownAt})?> _siblingRelyingOnParent(
+  SettingsRepository settings,
+  TerritorySpec spec,
+) async {
+  for (final t in territorySpecs) {
+    if (!t.alignable || t.code == spec.code) continue;
+    if (t.parentCode != spec.parentCode) continue;
+    final alignment = _parseAlignment(
+      await settings.getValue(disputedSettingKey(t.code)),
+      t,
+    );
+    if (alignment != DisputedAlignment.partOfParent) continue;
+    final raw = await settings.getValue(_savedMarksKey(t.code));
+    if (raw == null) continue;
+    final saved = jsonDecode(raw) as Map<String, dynamic>;
+    final ownAt = DateTime.tryParse(saved['ownAt'] as String? ?? '');
+    if (ownAt != null) return (code: t.code, ownAt: ownAt);
+  }
+  return null;
+}
+
 /// Saves the user's alignment for disputed territory [code].
 ///
 /// Choosing "part of parent" moves a visited mark from the territory to its
@@ -402,10 +427,23 @@ Future<void> setDisputedAlignment(
         saved['parentAutoAt'] as String? ?? '',
       );
       if (ownAt != null) await repo.markVisitedAt(code, ownAt);
-      // Unmark the parent only if we marked it and it is still that row.
+      // Unmark the parent only if we marked it and it is still that row,
+      // and no sibling territory is relying on that mark.
       if (parentAutoAt != null &&
           await repo.visitedAt(spec.parentCode) == parentAutoAt) {
-        await repo.setVisited(spec.parentCode, false);
+        final heir = await _siblingRelyingOnParent(settings, spec);
+        if (heir != null) {
+          // Hand over: the parent is unmarked when the heir goes independent.
+          await settings.setValue(
+            _savedMarksKey(heir.code),
+            jsonEncode({
+              'ownAt': heir.ownAt.toIso8601String(),
+              'parentAutoAt': parentAutoAt.toIso8601String(),
+            }),
+          );
+        } else {
+          await repo.setVisited(spec.parentCode, false);
+        }
       }
       await settings.delete(_savedMarksKey(code));
     }
