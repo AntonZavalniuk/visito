@@ -62,6 +62,10 @@ final int _extraCount =
         )
         .length;
 
+Future<void> _countAll(AppDatabase db) => db
+    .into(db.appSettings)
+    .insert(AppSettingsCompanion.insert(key: 'countBasis', value: 'all'));
+
 void _tallView(WidgetTester tester) {
   tester.view.physicalSize = const Size(800, 6000);
   tester.view.devicePixelRatio = 1;
@@ -75,7 +79,7 @@ void main() {
     (tester) async {
       final db = AppDatabase(NativeDatabase.memory());
       _tallView(tester);
-      _tallView(tester);
+      await _countAll(db);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -116,7 +120,7 @@ void main() {
       // Verify Brazil shows a check mark
       expect(find.byIcon(Icons.check_rounded), findsOneWidget);
 
-      // Summary counts countries (not territories), not UN-only.
+      // The summary counts every country under the "all" basis.
       expect(find.text('Visited: 1 of ${3 + _extraCount}'), findsOneWidget);
 
       await db.close();
@@ -156,6 +160,7 @@ void main() {
   testWidgets('group header shows visited / continent total', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     _tallView(tester);
+    await _countAll(db);
     await db
         .into(db.visitedCountries)
         .insert(VisitedCountriesCompanion.insert(isoCode: 'JP'));
@@ -194,13 +199,14 @@ void main() {
 
     expect(find.text('Gibraltar'), findsOneWidget);
     expect(find.text('Kosovo'), findsOneWidget);
-    expect(find.text('Visited: 0 of ${1 + _extraCount}'), findsOneWidget);
+    // Default basis: UN countries only, so just the United Kingdom counts.
+    expect(find.text('Visited: 0 of 1'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('territory_GI')));
     await tester.pumpAndSettle();
     expect(await db.select(db.visitedCountries).get(), hasLength(1));
-    // Territory visits do not count towards the country summary.
-    expect(find.text('Visited: 0 of ${1 + _extraCount}'), findsOneWidget);
+    // Territory visits do not count towards the UN summary.
+    expect(find.text('Visited: 0 of 1'), findsOneWidget);
 
     // Searching a territory keeps its parent country visible.
     await tester.enterText(find.byType(TextField), 'gibr');

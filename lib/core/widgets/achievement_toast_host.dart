@@ -113,7 +113,8 @@ class _AchievementToastHostState extends ConsumerState<AchievementToastHost>
   void _onStats(AsyncValue<WorldStats> next) {
     final stats = next.value;
     if (stats == null) return;
-    final index = rankProgress(stats.visitedCount).index;
+    // Ranks count UN countries and observers only, whatever the count basis.
+    final index = rankProgress(ref.read(rankVisitedCountProvider)).index;
     final previous = _rankIndex;
     _rankIndex = index;
     if (previous != null && index > previous) {

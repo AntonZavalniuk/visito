@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/settings_repository.dart';
 import '../data/territories.dart';
 import '../data/transcontinental.dart';
+import '../models/count_basis.dart';
 import '../models/country.dart';
 import '../models/list_entry.dart';
 import 'database_provider.dart';
@@ -94,23 +95,18 @@ final worldStatsProvider = Provider<AsyncValue<WorldStats>>((ref) {
     return AsyncValue.error(visitedAsync.error!, visitedAsync.stackTrace!);
   }
 
-  // Only officially recognized countries (UN member states) are counted;
-  // observers, disputed territories and Antarctica are excluded.
-  final official = (countriesAsync.value ?? <Country>[])
-      .where((c) => c.unMember)
-      .toList();
-  final visitedCodes = visitedAsync.value ?? {};
-
-  final visitedCount = official
-      .where((c) => visitedCodes.contains(c.isoCode))
-      .length;
+  final counted = ref.watch(countedEntriesProvider);
+  final painted = ref.watch(paintedCodesProvider);
 
   return AsyncValue.data(
-    WorldStats(visitedCount: visitedCount, totalCount: official.length),
+    WorldStats(
+      visitedCount: counted.where((e) => painted.contains(e.code)).length,
+      totalCount: counted.length,
+    ),
   );
 });
 
-/// Visited / total official (UN member) countries for one continent.
+/// Visited / total counted countries for one continent.
 class ContinentStats {
   const ContinentStats({
     required this.continent,
@@ -138,7 +134,8 @@ class ContinentStats {
 
 /// Computes per-continent stats from official (UN member) countries only,
 /// in [Continent] display order. Continents without official countries
-/// (e.g. Antarctica) are omitted.
+/// (e.g. Antarctica) are omitted. Used by the achievements, which are always
+/// about UN countries whatever the count basis.
 List<ContinentStats> computeContinentStats(
   List<Country> countries,
   Set<String> visitedCodes,
@@ -160,11 +157,36 @@ List<ContinentStats> computeContinentStats(
   return result;
 }
 
-/// Reactive per-continent statistics.
+/// Per-continent stats over the [counted] entries (see [CountBasis]), in
+/// [Continent] display order; a transcontinental country counts in each of
+/// its continents. Continents with nothing counted are omitted.
+List<ContinentStats> computeCountedContinentStats(
+  List<ListEntry> counted,
+  Set<String> paintedCodes,
+) {
+  final result = <ContinentStats>[];
+  for (final continent in Continent.values) {
+    final inContinent = counted
+        .where((e) => e.continents.contains(continent))
+        .toList();
+    if (inContinent.isEmpty) continue;
+    result.add(
+      ContinentStats(
+        continent: continent,
+        visited: inContinent.where((e) => paintedCodes.contains(e.code)).length,
+        total: inContinent.length,
+      ),
+    );
+  }
+  return result;
+}
+
+/// Reactive per-continent statistics under the chosen count basis.
 final continentStatsProvider = Provider<List<ContinentStats>>((ref) {
-  final countries = ref.watch(worldCountriesProvider).value ?? <Country>[];
-  final visited = ref.watch(visitedCountryCodesProvider).value ?? <String>{};
-  return computeContinentStats(countries, visited);
+  return computeCountedContinentStats(
+    ref.watch(countedEntriesProvider),
+    ref.watch(paintedCodesProvider),
+  );
 });
 
 /// Continents (including Antarctica) with at least one visited country,
@@ -450,6 +472,38 @@ Future<void> setDisputedAlignment(
     await settings.setValue(key, 'independent');
   }
 }
+
+/// Settings key holding the chosen [CountBasis].
+const String kCountBasisSettingKey = 'countBasis';
+
+/// The stored count basis; UN countries until the user picks another.
+final countBasisProvider = Provider<CountBasis>((ref) {
+  final raw = ref.watch(settingsStreamProvider).value?[kCountBasisSettingKey];
+  return CountBasis.values.firstWhere(
+    (b) => b.name == raw,
+    orElse: () => CountBasis.un,
+  );
+});
+
+Future<void> setCountBasis(WidgetRef ref, CountBasis basis) => ref
+    .read(settingsRepositoryProvider)
+    .setValue(kCountBasisSettingKey, basis.name);
+
+/// The list entries counted under the chosen basis.
+final countedEntriesProvider = Provider<List<ListEntry>>((ref) {
+  final basis = ref.watch(countBasisProvider);
+  return ref.watch(listEntriesProvider).where(basis.counts).toList();
+});
+
+/// Visited UN countries and observers: the number the travel ranks use,
+/// whatever count basis the user chose.
+final rankVisitedCountProvider = Provider<int>((ref) {
+  final painted = ref.watch(paintedCodesProvider);
+  return ref
+      .watch(listEntriesProvider)
+      .where((e) => CountBasis.un.counts(e) && painted.contains(e.code))
+      .length;
+});
 
 /// Reactive version of [paintedCodesOf].
 final paintedCodesProvider = Provider<Set<String>>((ref) {

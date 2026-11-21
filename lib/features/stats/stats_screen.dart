@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/country_status_tag.dart';
 import '../../core/widgets/glass_container.dart';
+import '../../models/count_basis.dart';
 import '../../models/country.dart';
 import '../../models/travel_rank.dart';
 import '../../providers/countries_provider.dart';
@@ -84,12 +86,12 @@ class StatsScreen extends ConsumerWidget {
                   const SizedBox(height: 20),
 
                   // Hero Progress Glass Card
-                  _buildHeroProgressCard(stats),
+                  _buildHeroProgressCard(stats, ref.watch(countBasisProvider)),
 
                   const SizedBox(height: 16),
 
                   // Travel Rank Card
-                  _buildRankCard(stats.visitedCount),
+                  _buildRankCard(ref.watch(rankVisitedCountProvider)),
 
                   const SizedBox(height: 16),
 
@@ -111,6 +113,7 @@ class StatsScreen extends ConsumerWidget {
                       continents: continentStats,
                       countries: countries,
                       visitedCodes: visitedCodes,
+                      basis: ref.watch(countBasisProvider),
                     ),
                   ] else ...[
                     GlassContainer(
@@ -178,7 +181,7 @@ class StatsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeroProgressCard(WorldStats stats) {
+  Widget _buildHeroProgressCard(WorldStats stats, CountBasis basis) {
     return GlassContainer(
       padding: const EdgeInsets.all(24),
       borderRadius: BorderRadius.circular(24),
@@ -274,7 +277,8 @@ class StatsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '${stats.visitedCount} of ${stats.totalCount} countries visited',
+                      '${stats.visitedCount} of ${stats.totalCount} '
+                      '${basis == CountBasis.all ? 'entities' : 'countries'} visited',
                       style: const TextStyle(
                         color: AppColors.primaryLight,
                         fontSize: 14,
@@ -282,10 +286,12 @@ class StatsScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    const Text(
-                      'UN member states only',
-                      key: ValueKey('hero_scope_hint'),
-                      style: TextStyle(
+                    Text(
+                      basis == CountBasis.un
+                          ? 'UN member states only'
+                          : 'Counting ${basis.noun}',
+                      key: const ValueKey('hero_scope_hint'),
+                      style: const TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
@@ -350,13 +356,22 @@ class StatsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      progress.current.title,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            progress.current.title,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const UnScopeBadge(),
+                      ],
                     ),
                     const SizedBox(height: 3),
                     Text(

@@ -35,7 +35,7 @@ class _Loader extends CountryGeoJsonLoader {
 }
 
 void main() {
-  test('stats count only UN member states', () async {
+  test('stats count UN members and observers only', () async {
     final db = AppDatabase(NativeDatabase.memory());
     final container = ProviderContainer(
       overrides: [
@@ -51,7 +51,7 @@ void main() {
     await container.read(worldCountriesProvider.future);
     final repo = container.read(countryRepositoryProvider);
     await repo.toggleVisited('FR');
-    await repo.toggleVisited('PS'); // observer: must not be counted
+    await repo.toggleVisited('PS'); // observer: counted (UN basis = 195)
     await repo.toggleVisited('EH'); // disputed: must not be counted
 
     container.listen(worldStatsProvider, (_, _) {}, fireImmediately: true);
@@ -60,8 +60,8 @@ void main() {
     }
 
     final stats = container.read(worldStatsProvider).requireValue;
-    expect(stats.totalCount, 2);
-    expect(stats.visitedCount, 1);
+    expect(stats.totalCount, 3);
+    expect(stats.visitedCount, 2);
   });
 
   test('computeContinentStats groups official countries by continent', () {

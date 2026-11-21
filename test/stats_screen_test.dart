@@ -86,7 +86,7 @@ void main() {
       expect(find.text('1 of 2 countries visited'), findsOneWidget);
       expect(find.text('Curious Wanderer 🎒'), findsOneWidget);
       expect(
-        find.text('5 more UN countries to Globetrotter ✈️'),
+        find.text('4 more UN countries to Globetrotter ✈️'),
         findsOneWidget,
       );
       expect(find.text('Explored Lands'), findsOneWidget);
@@ -109,7 +109,7 @@ void main() {
       // Top card: In Total.
       expect(find.byKey(const ValueKey('deck_total')), findsOneWidget);
       expect(find.text('In Total'), findsOneWidget);
-      expect(find.text('Out of 2 UN Countries'), findsOneWidget);
+      expect(find.text('Out of 2 UN countries'), findsOneWidget);
       // 1 of 2 = 50 % (rich text: number + '%' suffix).
       expect(find.text('50%', findRichText: true), findsWidgets);
 
@@ -159,7 +159,7 @@ void main() {
           of: find.byKey(const ValueKey('timeline_visited')),
           matching: find.text('Visited Countries'),
         ),
-        findsOneWidget,
+        findsNothing,
       );
       expect(
         find.descendant(

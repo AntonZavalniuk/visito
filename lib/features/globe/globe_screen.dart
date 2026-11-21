@@ -228,7 +228,7 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const UnScopeBadge(),
+                            UnScopeBadge(basis: ref.watch(countBasisProvider)),
                           ],
                         ),
                       ),
