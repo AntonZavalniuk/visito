@@ -130,7 +130,13 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
       final group = entries
           .where((e) => _continentsOf(e, allEntries).contains(continent))
           .toList();
-      if (group.isEmpty) continue;
+      final rows = _withOwnContinentTerritories(
+        group,
+        entries,
+        allEntries,
+        continent,
+      );
+      if (rows.isEmpty) continue;
       final counts = countsFor(continent);
       final header = _ContinentHeader(
         continent: continent,
@@ -138,9 +144,50 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
         total: counts.total,
       );
       items.add(header);
-      if (!_isCollapsed(header.title)) items.addAll(group);
+      if (!_isCollapsed(header.title)) {
+        items.addAll(rows);
+      }
     }
     return items;
+  }
+
+  /// Adds territories whose own continent is [continent] but differs from
+  /// their parent's (e.g. Greenland under North America) as standalone rows
+  /// in alphabetical position; they also stay nested under the parent.
+  List<Object> _withOwnContinentTerritories(
+    List<ListEntry> group,
+    List<ListEntry> entries,
+    List<ListEntry> allEntries,
+    Continent? continent,
+  ) {
+    if (continent == null) return group;
+    final extras =
+        entries
+            .where(
+              (e) =>
+                  e.isTerritory &&
+                  !e.hidden &&
+                  e.continents.contains(continent) &&
+                  !_continentsOf(e, allEntries).contains(continent),
+            )
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+    if (extras.isEmpty) return group;
+    final result = <Object>[];
+    var next = 0;
+    for (final e in group) {
+      if (!e.isTerritory) {
+        while (next < extras.length &&
+            extras[next].name.compareTo(e.name) < 0) {
+          result.add(_OwnContinentTerritory(extras[next++]));
+        }
+      }
+      result.add(e);
+    }
+    while (next < extras.length) {
+      result.add(_OwnContinentTerritory(extras[next++]));
+    }
+    return result;
   }
 
   /// Territories are grouped under their parent country's continents; a
@@ -373,6 +420,13 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
                       if (item is _ContinentHeader) {
                         return _buildContinentHeader(item);
                       }
+                      if (item is _OwnContinentTerritory) {
+                        return _buildEntryTile(
+                          item.entry,
+                          painted.contains(item.entry.code),
+                          standalone: true,
+                        );
+                      }
                       final entry = item as ListEntry;
                       final isVisited = painted.contains(entry.code);
 
@@ -391,9 +445,19 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
   /// Row for a country or territory: flag, name, status badge and a check
   /// mark when visited. Every row has the same height; territories are
   /// indented under their parent with a dotted tree connector.
-  Widget _buildEntryTile(ListEntry entry, bool isVisited) {
+  Widget _buildEntryTile(
+    ListEntry entry,
+    bool isVisited, {
+    bool standalone = false,
+  }) {
     final tile = GlassContainer(
-      key: ValueKey(entry.isTerritory ? 'territory_${entry.code}' : entry.code),
+      key: ValueKey(
+        standalone
+            ? 'own_territory_${entry.code}'
+            : entry.isTerritory
+            ? 'territory_${entry.code}'
+            : entry.code,
+      ),
       height: _rowHeight,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       borderRadius: BorderRadius.circular(14),
@@ -454,7 +518,7 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Opacity(
         opacity: entry.followsParent ? 0.55 : 1,
-        child: entry.isTerritory
+        child: entry.isTerritory && !standalone
             ? Row(
                 children: [
                   const SizedBox(width: 14),
@@ -523,6 +587,13 @@ class _CountriesListScreenState extends ConsumerState<CountriesListScreen> {
       ),
     );
   }
+}
+
+/// A territory listed again in its own continent's section.
+class _OwnContinentTerritory {
+  const _OwnContinentTerritory(this.entry);
+
+  final ListEntry entry;
 }
 
 /// Section header row shown above each continent's countries.

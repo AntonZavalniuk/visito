@@ -181,6 +181,29 @@ void main() {
     await db.close();
   });
 
+  testWidgets('territory is also listed in its own continent', (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    _tallView(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          countryGeoJsonLoaderProvider.overrideWithValue(
+            const _DenmarkLoader(),
+          ),
+        ],
+        child: const MaterialApp(home: CountriesListScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Nested under Denmark (Europe) and listed again under North America.
+    expect(find.byKey(const ValueKey('territory_GL')), findsOneWidget);
+    expect(find.byKey(const ValueKey('own_territory_GL')), findsOneWidget);
+
+    await db.close();
+  });
+
   testWidgets('territories are nested and marked separately', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     _tallView(tester);
@@ -231,6 +254,23 @@ class _TerritoryLoader extends CountryGeoJsonLoader {
       unMember: true,
       polygons: [
         [const LatLng(50, 0), const LatLng(51, 0), const LatLng(50, 1)],
+      ],
+    ),
+  ];
+}
+
+class _DenmarkLoader extends CountryGeoJsonLoader {
+  const _DenmarkLoader();
+
+  @override
+  Future<List<Country>> loadFromBundle([dynamic bundle]) async => [
+    Country(
+      isoCode: 'DK',
+      name: 'Denmark',
+      continent: Continent.europe,
+      unMember: true,
+      polygons: [
+        [const LatLng(55, 9), const LatLng(56, 9), const LatLng(55, 10)],
       ],
     ),
   ];
