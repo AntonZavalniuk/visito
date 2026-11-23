@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -13,11 +12,11 @@ import '../../core/widgets/glass_icon_button.dart';
 import '../countries/countries_list_screen.dart';
 import '../../models/country.dart';
 import '../../providers/countries_provider.dart';
-import '../../providers/database_provider.dart';
 import '../../utils/geo_utils.dart';
 
 /// Interactive world map screen with dark background, polygon overlays,
-/// tap-to-toggle visited status, and modern frosted glass controls.
+/// and modern frosted glass controls. Marking countries is done in the
+/// countries list; the map itself is view-only (pan and zoom).
 class WorldMapScreen extends ConsumerStatefulWidget {
   const WorldMapScreen({super.key});
 
@@ -25,17 +24,13 @@ class WorldMapScreen extends ConsumerStatefulWidget {
   ConsumerState<WorldMapScreen> createState() => _WorldMapScreenState();
 }
 
-class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
-    with SingleTickerProviderStateMixin {
+class _WorldMapScreenState extends ConsumerState<WorldMapScreen> {
   final MapController _mapController = MapController();
 
   // Visible part of the world (Mercator-friendly: no polar caps).
   static const double _northLat = 84;
   static const double _southLat = -58;
   static const double _maxZoomLevel = 9.0;
-
-  /// Screen distance (px) within which a tap picks a tiny country marker.
-  static const double _tinyMarkerHitRadius = 14;
 
   // Shifts the fitted view horizontally: positive moves the map to the left.
   static const double _centerLngOffset = 0;
@@ -93,109 +88,9 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
     }
   }
 
-  String? _tappedCountryMessage;
-  bool _tappedIsVisited = false;
-  Timer? _messageDismissTimer;
-
-  late final AnimationController _bannerAnimController;
-  late final Animation<Offset> _bannerSlideAnimation;
-  late final Animation<double> _bannerFadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _bannerAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 320),
-    );
-
-    _bannerSlideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _bannerAnimController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
-
-    _bannerFadeAnimation = CurvedAnimation(
-      parent: _bannerAnimController,
-      curve: Curves.easeOut,
-    );
-  }
-
-  @override
-  void dispose() {
-    _messageDismissTimer?.cancel();
-    _bannerAnimController.dispose();
-    _mapController.dispose();
-    super.dispose();
-  }
-
-  void _showMessage(String countryName, bool willBeVisited) {
-    _messageDismissTimer?.cancel();
-    setState(() {
-      _tappedCountryMessage = willBeVisited
-          ? 'Marked $countryName as visited! 🎉'
-          : 'Removed $countryName from visited';
-      _tappedIsVisited = willBeVisited;
-    });
-
-    _bannerAnimController.forward();
-
-    _messageDismissTimer = Timer(const Duration(milliseconds: 2800), () {
-      if (mounted) {
-        _bannerAnimController.reverse().then((_) {
-          if (mounted) {
-            setState(() => _tappedCountryMessage = null);
-          }
-        });
-      }
-    });
-  }
-
-  Future<void> _handleMapTap(
-    LatLng point,
-    List<Country> countries,
-    Set<String> visitedCodes,
-  ) async {
-    final tapped =
-        findCountryAtPoint(point, countries) ??
-        _tinyCountryNear(point, countries);
-    if (tapped == null) return;
-    // A territory that follows its parent acts as the parent (Somaliland).
-    final country = resolveTapTarget(
-      tapped,
-      ref.read(listEntriesProvider),
-      countries,
-    );
-
-    final isCurrentlyVisited = visitedCodes.contains(country.isoCode);
-    final nextState = !isCurrentlyVisited;
-
-    _showMessage(country.name, nextState);
-    await ref.read(countryRepositoryProvider).toggleVisited(country.isoCode);
-  }
-
   /// Countries too small to see or hit at map scale (Vatican City, Monaco).
   static bool _isTiny(Country c) =>
       math.max(c.maxLat - c.minLat, c.maxLng - c.minLng) < 0.5;
-
-  /// The tiny country whose marker lies within a fingertip of [point].
-  Country? _tinyCountryNear(LatLng point, List<Country> countries) {
-    final camera = _mapController.camera;
-    final tap = camera.latLngToScreenOffset(point);
-    Country? best;
-    var bestDistance = _tinyMarkerHitRadius;
-    for (final c in countries) {
-      if (!_isTiny(c)) continue;
-      final d = (camera.latLngToScreenOffset(c.center) - tap).distance;
-      if (d < bestDistance) {
-        best = c;
-        bestDistance = d;
-      }
-    }
-    return best;
-  }
 
   /// Marker dot radius (px); a country smaller than this on screen gets one.
   static const double _markerRadius = 5;
@@ -252,7 +147,6 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
   @override
   Widget build(BuildContext context) {
     final countriesAsync = ref.watch(worldCountriesProvider);
-    final visitedCodesAsync = ref.watch(visitedCountryCodesProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
@@ -267,7 +161,6 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
               final countries = allCountries
                   .where((c) => c.continent != Continent.antarctica)
                   .toList();
-              final visitedCodes = visitedCodesAsync.value ?? <String>{};
 
               return LayoutBuilder(
                 builder: (context, constraints) {
@@ -303,8 +196,6 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
                                   InteractiveFlag.scrollWheelZoom |
                                   InteractiveFlag.doubleTapZoom,
                       ),
-                      onTap: (tapPosition, point) =>
-                          _handleMapTap(point, countries, visitedCodes),
                     ),
                     children: [
                       PolygonLayer(
@@ -378,59 +269,6 @@ class _WorldMapScreenState extends ConsumerState<WorldMapScreen>
               ],
             ),
           ),
-
-          // 4. Animated Toast / Notification Pill
-          if (_tappedCountryMessage != null)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: navBarClearance(context, gap: 12),
-                ),
-                child: SlideTransition(
-                  position: _bannerSlideAnimation,
-                  child: FadeTransition(
-                    opacity: _bannerFadeAnimation,
-                    child: GlassContainer(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      borderRadius: BorderRadius.circular(30),
-                      color: _tappedIsVisited
-                          ? AppColors.visitedAmber.withValues(alpha: 0.30)
-                          : AppColors.backgroundCard.withValues(alpha: 0.70),
-                      borderColor: _tappedIsVisited
-                          ? AppColors.visitedAmberLight.withValues(alpha: 0.5)
-                          : Colors.white.withValues(alpha: 0.2),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _tappedIsVisited
-                                ? Icons.check_circle_rounded
-                                : Icons.remove_circle_outline_rounded,
-                            size: 18,
-                            color: _tappedIsVisited
-                                ? AppColors.visitedAmberLight
-                                : AppColors.textSecondary,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            _tappedCountryMessage!,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );

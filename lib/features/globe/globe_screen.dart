@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'dart:ui' as ui;
@@ -6,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
 
 import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
@@ -14,8 +12,6 @@ import '../../core/widgets/country_status_tag.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../models/country.dart';
 import '../../providers/countries_provider.dart';
-import '../../providers/database_provider.dart';
-import '../../utils/geo_utils.dart';
 import 'globe_painter.dart';
 
 /// Globe tab: an interactive 3D globe with visited countries highlighted.
@@ -38,10 +34,6 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
 
   List<GlobeRing>? _rings;
   List<Country>? _ringsSource;
-
-  String? _message;
-  bool _messageIsVisited = false;
-  Timer? _messageTimer;
 
   GlobeRelief? _relief;
 
@@ -66,25 +58,6 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
     } catch (e) {
       debugPrint('Globe relief unavailable, using flat fills: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    _messageTimer?.cancel();
-    super.dispose();
-  }
-
-  void _showMessage(String countryName, bool willBeVisited) {
-    _messageTimer?.cancel();
-    setState(() {
-      _message = willBeVisited
-          ? 'Marked $countryName as visited! 🎉'
-          : 'Removed $countryName from visited';
-      _messageIsVisited = willBeVisited;
-    });
-    _messageTimer = Timer(const Duration(milliseconds: 2800), () {
-      if (mounted) setState(() => _message = null);
-    });
   }
 
   GlobeView _viewFor(Size size) {
@@ -119,28 +92,6 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
     });
   }
 
-  Future<void> _onTapUp(
-    TapUpDetails d,
-    Size size,
-    List<Country> countries,
-    Set<String> visited,
-  ) async {
-    final geo = _viewFor(size).unproject(d.localPosition);
-    if (geo == null) return;
-    final tapped = findCountryAtPoint(LatLng(geo.lat, geo.lng), countries);
-    if (tapped == null) return;
-    // A territory that follows its parent acts as the parent (Somaliland).
-    final country = resolveTapTarget(
-      tapped,
-      ref.read(listEntriesProvider),
-      countries,
-    );
-
-    // Same behavior as the Map tab: tapping toggles visited status.
-    _showMessage(country.name, !visited.contains(country.isoCode));
-    await ref.read(countryRepositoryProvider).toggleVisited(country.isoCode);
-  }
-
   void _resetView() {
     setState(() {
       _lat = 20 * math.pi / 180;
@@ -152,7 +103,6 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
   @override
   Widget build(BuildContext context) {
     final countriesAsync = ref.watch(worldCountriesProvider);
-    final visited = ref.watch(visitedCountryCodesProvider).value ?? <String>{};
     final statsAsync = ref.watch(worldStatsProvider);
 
     return Scaffold(
@@ -180,7 +130,6 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
                       behavior: HitTestBehavior.opaque,
                       onScaleStart: _onScaleStart,
                       onScaleUpdate: (d) => _onScaleUpdate(d, size),
-                      onTapUp: (d) => _onTapUp(d, size, countries, visited),
                       child: CustomPaint(
                         size: size,
                         painter: GlobePainter(
@@ -256,53 +205,6 @@ class _GlobeScreenState extends ConsumerState<GlobeScreen> {
               ),
             ),
           ),
-
-          // Toast
-          if (_message != null)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: navBarClearance(context, gap: 12),
-                ),
-                child: GlassContainer(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  borderRadius: BorderRadius.circular(30),
-                  color: _messageIsVisited
-                      ? AppColors.visitedAmber.withValues(alpha: 0.30)
-                      : AppColors.backgroundCard.withValues(alpha: 0.70),
-                  borderColor: _messageIsVisited
-                      ? AppColors.visitedAmberLight.withValues(alpha: 0.5)
-                      : Colors.white.withValues(alpha: 0.2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _messageIsVisited
-                            ? Icons.check_circle_rounded
-                            : Icons.remove_circle_outline_rounded,
-                        size: 18,
-                        color: _messageIsVisited
-                            ? AppColors.visitedAmberLight
-                            : AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        _message!,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
